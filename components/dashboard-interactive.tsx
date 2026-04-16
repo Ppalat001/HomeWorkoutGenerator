@@ -229,7 +229,7 @@ export default function DashboardInteractive({
             return (
               <div
                 key={d.dateIso}
-                draggable={canDrag}
+                draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData("text/plain", String(idx));
                   e.dataTransfer.effectAllowed = "move";
