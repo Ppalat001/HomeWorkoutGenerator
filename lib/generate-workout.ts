@@ -21,7 +21,10 @@ const WEEKDAY_KEYS = [
 
 export type DayPlan = {
   weekdayKey: string;
+  /** Long label e.g. "Monday, Jan 15" in the user's locale. */
   label: string;
+  /** Local calendar date `YYYY-MM-DD` for this column. */
+  dateIso: string;
   isTrainingDay: boolean;
   exercises: PlannedExercise[];
 };
@@ -146,6 +149,13 @@ function labelForDate(d: Date): string {
   });
 }
 
+function localDateIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 /**
  * Builds a personalized weekly grid and today's session from preferences and history.
  */
@@ -192,14 +202,16 @@ export function generateWorkout(
     week.push({
       weekdayKey: key,
       label: labelForDate(d),
+      dateIso: localDateIso(d),
       isTrainingDay,
       exercises,
     });
   }
 
-  const todayKey = weekdayKeyForDate(new Date());
+  const todayIso = localDateIso(new Date());
   const todayPlan =
-    week.find((d) => d.weekdayKey === todayKey) ??
+    week.find((d) => d.dateIso === todayIso) ??
+    week.find((d) => d.weekdayKey === weekdayKeyForDate(new Date())) ??
     week.find((d) => d.isTrainingDay) ??
     week[0];
 
