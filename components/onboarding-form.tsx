@@ -6,16 +6,6 @@ import { useRouter } from "next/navigation";
 import { Dumbbell } from "lucide-react";
 import type { AdaptiveLevel } from "@/lib/workout-types";
 
-const DAY_OPTIONS = [
-  { key: "monday", label: "Mon" },
-  { key: "tuesday", label: "Tue" },
-  { key: "wednesday", label: "Wed" },
-  { key: "thursday", label: "Thu" },
-  { key: "friday", label: "Fri" },
-  { key: "saturday", label: "Sat" },
-  { key: "sunday", label: "Sun" },
-] as const;
-
 const TYPE_OPTIONS = [
   { key: "strength", label: "Strength" },
   { key: "cardio", label: "Cardio" },
@@ -24,24 +14,20 @@ const TYPE_OPTIONS = [
   { key: "flexibility", label: "Flexibility" },
 ] as const;
 
+const SELECT_FIELD =
+  "w-full rounded-xl border border-white/20 bg-[#0b1535] px-4 py-3 text-sm text-slate-100 outline-none focus:border-cyan-400 [color-scheme:dark]";
+
 export default function OnboardingForm() {
   const router = useRouter();
   const [goal, setGoal] = useState("general_fitness");
   const [fitnessLevel, setFitnessLevel] = useState<AdaptiveLevel>("beginner");
   const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState(3);
-  const [days, setDays] = useState<string[]>(["monday", "wednesday", "friday"]);
   const [workoutDurationMinutes, setWorkoutDurationMinutes] = useState(30);
   const [types, setTypes] = useState<string[]>(["strength", "core"]);
   const [limitations, setLimitations] = useState("");
   const [wantsLowImpact, setWantsLowImpact] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  function toggleDay(key: string) {
-    setDays((prev) =>
-      prev.includes(key) ? prev.filter((d) => d !== key) : [...prev, key]
-    );
-  }
 
   function toggleType(key: string) {
     setTypes((prev) =>
@@ -62,7 +48,6 @@ export default function OnboardingForm() {
           goal,
           fitnessLevel,
           trainingDaysPerWeek,
-          preferredTrainingDays: days,
           workoutDurationMinutes,
           preferredExerciseTypes: types,
           limitations,
@@ -102,7 +87,10 @@ export default function OnboardingForm() {
       </header>
 
       <section className="relative px-6 py-12">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.14),transparent_30%)]" />
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.14),transparent_30%)]"
+          aria-hidden
+        />
         <div className="relative z-10 mx-auto max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-md">
           <h1 className="text-2xl font-bold md:text-3xl">Personalize your plan</h1>
           <p className="mt-2 text-sm text-white/70">
@@ -118,7 +106,7 @@ export default function OnboardingForm() {
               <select
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                className={SELECT_FIELD}
               >
                 <option value="weight_loss">Weight loss</option>
                 <option value="muscle_gain">Muscle gain</option>
@@ -136,7 +124,7 @@ export default function OnboardingForm() {
                 onChange={(e) =>
                   setFitnessLevel(e.target.value as AdaptiveLevel)
                 }
-                className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                className={SELECT_FIELD}
               >
                 <option value="beginner">Beginner</option>
                 <option value="intermediate">Intermediate</option>
@@ -144,45 +132,28 @@ export default function OnboardingForm() {
               </select>
             </div>
 
-            <div>
+            <div className="relative z-20">
               <label className="mb-2 block text-sm font-medium text-white/85">
-                Training days per week ({trainingDaysPerWeek})
+                Training days per week:{" "}
+                <span className="tabular-nums text-cyan-200">
+                  {trainingDaysPerWeek}
+                </span>
               </label>
               <input
                 type="range"
                 min={2}
                 max={5}
+                step={1}
                 value={trainingDaysPerWeek}
                 onChange={(e) =>
                   setTrainingDaysPerWeek(Number(e.target.value))
                 }
-                className="w-full accent-cyan-400"
+                className="h-10 w-full cursor-pointer accent-cyan-400"
               />
-            </div>
-
-            <div>
-              <p className="mb-2 text-sm font-medium text-white/85">
-                Available days (pick at least as many as training days)
+              <p className="mt-1 text-xs text-white/55">
+                You choose which calendar days to train; this only sets how many
+                sessions we plan per week.
               </p>
-              <div className="flex flex-wrap gap-2">
-                {DAY_OPTIONS.map((d) => {
-                  const active = days.includes(d.key);
-                  return (
-                    <button
-                      key={d.key}
-                      type="button"
-                      onClick={() => toggleDay(d.key)}
-                      className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                        active
-                          ? "border-cyan-300/60 bg-cyan-500/25 text-cyan-50"
-                          : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                  );
-                })}
-              </div>
             </div>
 
             <div>
@@ -194,7 +165,7 @@ export default function OnboardingForm() {
                 onChange={(e) =>
                   setWorkoutDurationMinutes(Number(e.target.value))
                 }
-                className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+                className={SELECT_FIELD}
               >
                 <option value={15}>15</option>
                 <option value={20}>20</option>
@@ -236,7 +207,7 @@ export default function OnboardingForm() {
                 value={limitations}
                 onChange={(e) => setLimitations(e.target.value)}
                 rows={3}
-                className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-cyan-400"
+                className="w-full rounded-xl border border-white/20 bg-[#0b1535] px-4 py-3 text-sm text-slate-100 outline-none placeholder:text-white/40 focus:border-cyan-400 [color-scheme:dark]"
                 placeholder="e.g. sensitive knees, lower back tightness..."
               />
             </div>

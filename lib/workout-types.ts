@@ -20,6 +20,7 @@ export type UserPreferences = {
   goal: string;
   fitnessLevel: AdaptiveLevel;
   trainingDaysPerWeek: number;
+  /** Template weekdays spread from frequency; scheduling uses `trainingDaysPerWeek`. */
   preferredTrainingDays: string[];
   workoutDurationMinutes: number;
   preferredExerciseTypes: string[];

@@ -1,5 +1,6 @@
 import { computeAdaptiveLevel, labelForLevel } from "@/lib/adaptive";
 import { EXERCISES } from "@/lib/exercises";
+import { defaultTrainingWeekdayKeys } from "@/lib/training-week";
 import type {
   AdaptiveLevel,
   Exercise,
@@ -163,13 +164,10 @@ export function generateWorkout(
 
   const weekStart = startOfWeekMonday(new Date());
   const week: DayPlan[] = [];
-  const preferred = preferences.preferredTrainingDays.map((x) =>
-    x.toLowerCase()
+  const preferred = defaultTrainingWeekdayKeys(
+    preferences.trainingDaysPerWeek
   );
-  const maxDays = Math.min(
-    preferences.trainingDaysPerWeek,
-    preferred.length || preferences.trainingDaysPerWeek
-  );
+  const maxDays = preferences.trainingDaysPerWeek;
 
   for (let i = 0; i < 7; i += 1) {
     const d = new Date(weekStart);

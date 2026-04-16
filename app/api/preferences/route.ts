@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth";
 import { createUserPreferences } from "@/lib/preferences";
+import { defaultTrainingWeekdayKeys } from "@/lib/training-week";
 import type { AdaptiveLevel } from "@/lib/workout-types";
 
 const LEVELS: AdaptiveLevel[] = ["beginner", "intermediate", "expert"];
@@ -23,7 +24,6 @@ export async function POST(req: Request) {
     const goal = String(body.goal || "").trim();
     const fitnessLevel = body.fitnessLevel;
     const trainingDaysPerWeek = Number(body.trainingDaysPerWeek);
-    const preferredTrainingDays: unknown = body.preferredTrainingDays;
     const workoutDurationMinutes = Number(body.workoutDurationMinutes);
     const preferredExerciseTypes: unknown = body.preferredExerciseTypes;
     const limitations = String(body.limitations || "").trim();
@@ -48,26 +48,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!Array.isArray(preferredTrainingDays) || preferredTrainingDays.length === 0) {
-      return NextResponse.json(
-        { error: "Select at least one available training day" },
-        { status: 400 }
-      );
-    }
-
-    const days = preferredTrainingDays.map((d: unknown) =>
-      String(d).toLowerCase().trim()
-    );
-
-    if (days.length < trainingDaysPerWeek) {
-      return NextResponse.json(
-        {
-          error:
-            "Pick at least as many available days as your weekly training frequency",
-        },
-        { status: 400 }
-      );
-    }
+    const days = defaultTrainingWeekdayKeys(trainingDaysPerWeek);
 
     if (
       !Number.isFinite(workoutDurationMinutes) ||

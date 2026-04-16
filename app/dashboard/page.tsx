@@ -80,8 +80,8 @@ export default async function DashboardPage() {
 
               {!plan.today.isTrainingDay && (
                 <p className="mt-4 text-sm text-white/75">
-                  Scheduled rest day. Your next session is on one of your
-                  available training days this week.
+                  Scheduled rest day in this sample week. Train on whichever
+                  day works for you when it is a workout day.
                 </p>
               )}
 
@@ -136,8 +136,8 @@ export default async function DashboardPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
             <h2 className="text-xl font-semibold">This week</h2>
             <p className="mt-1 text-sm text-white/70">
-              Built from your available days, weekly frequency, and session
-              length.
+              Sample week layout from your weekly frequency and session length
+              (you train on whichever days fit your schedule).
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {plan.week.map((d) => (
