@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { DayPlan } from "@/lib/generate-workout";
 import type { AdaptiveLevel } from "@/lib/workout-types";
 import WorkoutFeedback from "@/components/workout-feedback";
@@ -103,6 +109,24 @@ export default function DashboardInteractive({
 
   const [selectedIndex, setSelectedIndex] = useState(initialSelected);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const pendingScrollRestore = useRef<number | null>(null);
+
+  const selectDay = useCallback((idx: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof window !== "undefined") {
+      pendingScrollRestore.current = window.scrollY;
+    }
+    setSelectedIndex(idx);
+  }, []);
+
+  useLayoutEffect(() => {
+    const y = pendingScrollRestore.current;
+    if (y != null) {
+      window.scrollTo(0, y);
+      pendingScrollRestore.current = null;
+    }
+  }, [selectedIndex]);
 
   const selected = week[selectedIndex] ?? week[0];
   const isViewingCalendarToday = selected.dateIso === todayIso;
@@ -254,7 +278,7 @@ export default function DashboardInteractive({
               >
                 <button
                   type="button"
-                  onClick={() => setSelectedIndex(idx)}
+                  onClick={(e) => selectDay(idx, e)}
                   className="w-full px-4 pt-4 pb-3 text-left transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
                 >
                   <span className="block text-sm font-semibold text-white">
@@ -302,7 +326,7 @@ export default function DashboardInteractive({
                 <button
                   key={d.dateIso}
                   type="button"
-                  onClick={() => setSelectedIndex(idx)}
+                  onClick={(e) => selectDay(idx, e)}
                   className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
                     active
                       ? "border-cyan-300/60 bg-cyan-500/25 text-cyan-50"
