@@ -66,7 +66,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/beginner");
+      router.push("/");
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -92,11 +92,8 @@ export default function LoginPage() {
             <Link href="/" className="transition hover:text-white">
               Home
             </Link>
-            <Link href="/workout" className="transition hover:text-white">
-              Today&apos;s Workout
-            </Link>
-            <Link href="/history" className="transition hover:text-white">
-              History
+            <Link href="/dashboard" className="transition hover:text-white">
+              Dashboard
             </Link>
           </nav>
         </div>

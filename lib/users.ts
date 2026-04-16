@@ -1,9 +1,6 @@
 import bcrypt from "bcryptjs";
 import clientPromise from "@/lib/mongodb";
-
-// Default matches your Atlas screenshot: database `users`, collection `users`.
-const DB_NAME = process.env.MONGODB_DB_NAME ?? "users";
-const COLLECTION = process.env.MONGODB_COLLECTION_NAME ?? "users";
+import { MONGODB_DB_NAME, USERS_COLLECTION } from "@/lib/db-names";
 
 export type AppUser = {
   _id?: string;
@@ -15,9 +12,9 @@ export type AppUser = {
 
 export async function findUserByEmail(email: string) {
   const client = await clientPromise;
-  const db = client.db(DB_NAME);
+  const db = client.db(MONGODB_DB_NAME);
 
-  return db.collection(COLLECTION).findOne({ email: email.toLowerCase() });
+  return db.collection(USERS_COLLECTION).findOne({ email: email.toLowerCase() });
 }
 
 export async function createUser({
@@ -30,10 +27,10 @@ export async function createUser({
   password: string;
 }) {
   const client = await clientPromise;
-  const db = client.db(DB_NAME);
+  const db = client.db(MONGODB_DB_NAME);
 
   const existingUser = await db
-    .collection(COLLECTION)
+    .collection(USERS_COLLECTION)
     .findOne({ email: email.toLowerCase() });
 
   if (existingUser) {
@@ -42,7 +39,7 @@ export async function createUser({
 
   const hashedPassword = await bcrypt.hash(password, 12);
 
-  const result = await db.collection(COLLECTION).insertOne({
+  const result = await db.collection(USERS_COLLECTION).insertOne({
     name: name?.trim() || "",
     email: email.toLowerCase(),
     password: hashedPassword,

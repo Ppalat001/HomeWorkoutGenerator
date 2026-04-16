@@ -1,0 +1,46 @@
+export type AdaptiveLevel = "beginner" | "intermediate" | "expert";
+
+export type WorkoutFeedback = "easy" | "ok" | "hard";
+
+export type Exercise = {
+  id: string;
+  name: string;
+  type: string;
+  level: AdaptiveLevel;
+  goals: string[];
+  duration?: number;
+  reps?: number;
+  lowImpact: boolean;
+  video?: string;
+};
+
+export type UserPreferences = {
+  _id?: string;
+  userId: string;
+  goal: string;
+  fitnessLevel: AdaptiveLevel;
+  trainingDaysPerWeek: number;
+  preferredTrainingDays: string[];
+  workoutDurationMinutes: number;
+  preferredExerciseTypes: string[];
+  limitations: string;
+  wantsLowImpact: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type WorkoutHistoryEntry = {
+  _id?: string;
+  userId: string;
+  date: Date;
+  adaptiveLevel: AdaptiveLevel;
+  completionRate: number;
+  feedback: WorkoutFeedback | null;
+  skipped: boolean;
+};
+
+export type PlannedExercise = Exercise & {
+  sets: number;
+  repsDisplay: string;
+  minutes: number;
+};
