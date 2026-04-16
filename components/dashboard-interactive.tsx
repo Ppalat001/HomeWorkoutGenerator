@@ -214,9 +214,12 @@ export default function DashboardInteractive({
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
         <h2 className="text-xl font-semibold">This week</h2>
         <p className="mt-1 text-sm text-white/70">
-          Drag a <span className="text-cyan-200">training</span> day onto a{" "}
-          <span className="text-white/90">rest</span> day to move that workout
-          when your schedule shifts. Pick a day below to preview its program.
+          Click a day&apos;s <span className="text-white/90">title (date line)</span>{" "}
+          to load that program. Drag the <span className="text-cyan-200">block</span>{" "}
+          below it onto another day&apos;s block to swap a{" "}
+          <span className="text-cyan-200">training</span> session with a{" "}
+          <span className="text-white/90">rest</span> day. Use the chips below to
+          jump days too.
         </p>
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {week.map((d, idx) => {
@@ -226,16 +229,17 @@ export default function DashboardInteractive({
               dragIndex !== idx &&
               week[dragIndex].isTrainingDay !== d.isTrainingDay;
 
+            const outerRing = isSwapTarget
+              ? "border-cyan-400/80 bg-cyan-500/25 shadow-lg shadow-cyan-500/30 ring-2 ring-cyan-300/70"
+              : "border-white/10";
+
+            const outerDragGlow = isDragging
+              ? "ring-2 ring-amber-300/90 border-amber-400/80 bg-amber-500/20 shadow-lg shadow-amber-400/25"
+              : "";
+
             return (
               <div
                 key={d.dateIso}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("text/plain", String(idx));
-                  e.dataTransfer.effectAllowed = "move";
-                  setDragIndex(idx);
-                }}
-                onDragEnd={() => setDragIndex(null)}
                 onDragOver={(e) => {
                   if (
                     dragIndex !== null &&
@@ -246,28 +250,44 @@ export default function DashboardInteractive({
                   }
                 }}
                 onDrop={(e) => handleDrop(idx, e)}
-                className={`rounded-xl border bg-[#07142f]/40 p-4 transition ${
-                  isDragging
-                    ? "border-cyan-400/50 opacity-70"
-                    : isSwapTarget
-                      ? "border-cyan-300/40 ring-1 ring-cyan-400/30"
-                      : "border-white/10"
-                } cursor-grab active:cursor-grabbing`}
+                className={`overflow-hidden rounded-xl border bg-[#07142f]/50 transition ${outerRing} ${outerDragGlow}`}
               >
-                <p className="text-sm font-semibold">{d.label}</p>
-                <p className="mt-1 text-xs text-white/60 capitalize">
-                  {d.weekdayKey}
-                </p>
-                <p className="mt-3 text-xs font-medium uppercase tracking-wide text-cyan-200/80">
-                  {d.isTrainingDay ? "Training" : "Rest"}
-                </p>
-                {d.isTrainingDay && (
-                  <ul className="mt-2 space-y-1 text-xs text-white/75">
-                    {d.exercises.map((ex) => (
-                      <li key={ex.id}>• {ex.name}</li>
-                    ))}
-                  </ul>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedIndex(idx)}
+                  className="w-full px-4 pt-4 pb-3 text-left transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
+                >
+                  <span className="block text-sm font-semibold text-white">
+                    {d.label}
+                  </span>
+                </button>
+                <div
+                  draggable
+                  title="Drag onto another day to move this workout"
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", String(idx));
+                    e.dataTransfer.effectAllowed = "move";
+                    setDragIndex(idx);
+                  }}
+                  onDragEnd={() => setDragIndex(null)}
+                  className={`cursor-grab select-none border-t border-white/10 px-4 pb-4 pt-3 active:cursor-grabbing ${
+                    isDragging
+                      ? "border-t-cyan-300/80 bg-cyan-500/40 shadow-[inset_0_0_32px_rgba(34,211,238,0.35)]"
+                      : "bg-[#050d1a]/90"
+                  }`}
+                >
+                  <p className="text-xs text-white/55 capitalize">{d.weekdayKey}</p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-cyan-100">
+                    {d.isTrainingDay ? "Training" : "Rest"}
+                  </p>
+                  {d.isTrainingDay && (
+                    <ul className="mt-2 space-y-1 text-xs text-white/80">
+                      {d.exercises.map((ex) => (
+                        <li key={ex.id}>• {ex.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             );
           })}
