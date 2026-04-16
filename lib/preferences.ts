@@ -86,3 +86,16 @@ export async function createUserPreferences(
     updatedAt: now,
   });
 }
+
+export async function updateUserFitnessLevel(
+  userId: string,
+  fitnessLevel: AdaptiveLevel
+): Promise<{ matchedCount: number }> {
+  const client = await clientPromise;
+  const db = client.db(MONGODB_DB_NAME);
+  const result = await db.collection(USER_PREFERENCES_COLLECTION).updateOne(
+    { userId: new ObjectId(userId) },
+    { $set: { fitnessLevel, updatedAt: new Date() } }
+  );
+  return { matchedCount: result.matchedCount };
+}

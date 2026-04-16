@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth";
-import { createUserPreferences } from "@/lib/preferences";
+import { createUserPreferences, updateUserFitnessLevel } from "@/lib/preferences";
 import { defaultTrainingWeekdayKeys } from "@/lib/training-week";
 import type { AdaptiveLevel } from "@/lib/workout-types";
 
@@ -9,6 +9,44 @@ const LEVELS: AdaptiveLevel[] = ["beginner", "intermediate", "expert"];
 
 function isAdaptiveLevel(v: unknown): v is AdaptiveLevel {
   return typeof v === "string" && LEVELS.includes(v as AdaptiveLevel);
+}
+
+export async function PATCH(req: Request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const fitnessLevel = body.fitnessLevel;
+
+    if (!isAdaptiveLevel(fitnessLevel)) {
+      return NextResponse.json(
+        { error: "Invalid fitness level" },
+        { status: 400 }
+      );
+    }
+
+    const { matchedCount } = await updateUserFitnessLevel(
+      session.user.id,
+      fitnessLevel
+    );
+
+    if (matchedCount === 0) {
+      return NextResponse.json(
+        { error: "No preferences found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const message =
+      e instanceof Error ? e.message : "Could not update preferences";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
