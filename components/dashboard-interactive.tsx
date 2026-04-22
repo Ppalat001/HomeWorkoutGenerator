@@ -909,8 +909,10 @@ export default function DashboardInteractive({
             consistency.suggestedLevelIncrease && (
               <div className="mt-4 rounded-xl border border-violet-300/35 bg-violet-500/10 p-3">
                 <p className="text-xs text-violet-100">
-                  You have completed at least 85% of planned sessions for 6
-                  consecutive weeks. Increase difficulty from{" "}
+                  You hit the level-up streak:{" "}
+                  {consistency.levelIncreaseStreakWeeksRequired} consecutive
+                  strong weeks (≥85% of your weekly plan, or ≥85% average
+                  completion on logged workouts). Increase difficulty from{" "}
                   <span className="font-semibold text-white">{levelLabel}</span>{" "}
                   to{" "}
                   <span className="font-semibold text-white">
@@ -979,7 +981,8 @@ export default function DashboardInteractive({
 
           <div className="mt-4 rounded-xl border border-white/15 bg-white/5 p-3">
             <p className="text-xs text-white/75">
-              Level increase reminder settings (after a 6-week strong streak)
+              Level increase reminder settings (after a{" "}
+              {consistency.levelIncreaseStreakWeeksRequired}-week strong streak)
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <select

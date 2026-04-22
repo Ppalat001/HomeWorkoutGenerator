@@ -68,6 +68,8 @@ export type ConsistencyPlan = {
   suggestedLevelIncrease: AdaptiveLevel | null;
   levelIncreasePromptEveryDays: number;
   levelIncreasePromptNever: boolean;
+  /** Consecutive calendar weeks evaluated for the level-up streak (4–6). */
+  levelIncreaseStreakWeeksRequired: number;
 };
 
 function levelRank(level: AdaptiveLevel): number {
@@ -224,6 +226,29 @@ function completedCountInRange(
   }).length;
 }
 
+function entriesInRange(
+  history: WorkoutHistoryEntry[],
+  start: Date,
+  endExclusive: Date
+): WorkoutHistoryEntry[] {
+  return history.filter((h) => {
+    const t = new Date(h.date).getTime();
+    return t >= start.getTime() && t < endExclusive.getTime() && !h.skipped;
+  });
+}
+
+/** Mean session `completionRate` in window, or null if no non-skipped rows. */
+function averageCompletionRateInRange(
+  history: WorkoutHistoryEntry[],
+  start: Date,
+  endExclusive: Date
+): number | null {
+  const entries = entriesInRange(history, start, endExclusive);
+  if (entries.length === 0) return null;
+  const sum = entries.reduce((acc, h) => acc + h.completionRate, 0);
+  return sum / entries.length;
+}
+
 function weeklyCompletions(history: WorkoutHistoryEntry[], weeks: number): number[] {
   const counts: number[] = [];
   for (let w = 1; w <= weeks; w += 1) {
@@ -258,14 +283,53 @@ function hasFourConsecutiveHighCompletionWeeks(
 }
 
 /**
- * True when some block of six consecutive Monday-based weeks (each week
- * ending after the user's first log) all have completed (non-skipped)
- * sessions ≥ 85% of `weeklyPlanDays`. Sliding window handles accounts
- * whose history does not align with "weeks 1–6 ago from today".
+ * A week is "strong" if either:
+ * - completed sessions ≥ 85% of planned training days, or
+ * - at least one completed session and mean `completionRate` ≥ 0.85
+ *   (so seeds / users with fewer logs per week but strong session quality still qualify).
  */
-function hasSixConsecutiveStrongCompletionWeeks(
+function weekMeetsStrongCompletionRule(
   history: WorkoutHistoryEntry[],
+  start: Date,
+  endExclusive: Date,
   weeklyPlanDays: number
+): boolean {
+  const completed = completedCountInRange(history, start, endExclusive);
+  if (completed === 0) return false;
+  const countOk = completed / weeklyPlanDays >= 0.85;
+  const avgCr = averageCompletionRateInRange(history, start, endExclusive);
+  const qualityOk = avgCr !== null && avgCr >= 0.85;
+  return countOk || qualityOk;
+}
+
+/**
+ * How many consecutive Monday weeks must pass the strong rule. Uses up to 6
+ * when history spans enough days; otherwise `ceil(spanDays/7)` clamped to
+ * [4, 6] so ~4 weeks of logs can still qualify (six full weeks of events
+ * cannot fit in ~28 days of history).
+ */
+function requiredConsecutiveWeeksForLevelIncrease(
+  history: WorkoutHistoryEntry[]
+): number {
+  if (history.length === 0) return 6;
+  const earliestMs = Math.min(
+    ...history.map((h) => new Date(h.date).getTime())
+  );
+  const latestMs = Math.max(
+    ...history.map((h) => new Date(h.date).getTime())
+  );
+  const spanDays = (latestMs - earliestMs) / MS_PER_DAY;
+  return Math.min(6, Math.max(4, Math.ceil(spanDays / 7)));
+}
+
+/**
+ * True when some block of `requiredWeeks` consecutive Monday-based weeks
+ * (each ending after the user's first log) all meet the strong-completion rule.
+ */
+function hasConsecutiveStrongCompletionWeeks(
+  history: WorkoutHistoryEntry[],
+  weeklyPlanDays: number,
+  requiredWeeks: number
 ): boolean {
   if (weeklyPlanDays <= 0 || history.length === 0) return false;
   const earliestMs = Math.min(
@@ -275,15 +339,14 @@ function hasSixConsecutiveStrongCompletionWeeks(
   const maxStart = 24;
   for (let startW = 1; startW <= maxStart; startW += 1) {
     let blockOk = true;
-    for (let j = 0; j < 6; j += 1) {
+    for (let j = 0; j < requiredWeeks; j += 1) {
       const w = startW + j;
       const { start, endExclusive } = weekWindowMonday(w);
       if (endExclusive.getTime() <= earliestMs) {
         blockOk = false;
         break;
       }
-      const completed = completedCountInRange(history, start, endExclusive);
-      if (completed / weeklyPlanDays < 0.85) {
+      if (!weekMeetsStrongCompletionRule(history, start, endExclusive, weeklyPlanDays)) {
         blockOk = false;
         break;
       }
@@ -476,11 +539,14 @@ export function generateWorkout(
     : null;
 
   const suggestedLevelIncrease = nextAdaptiveLevelUp(adaptiveLevel);
+  const levelIncreaseStreakWeeksRequired =
+    requiredConsecutiveWeeksForLevelIncrease(history);
   const canSuggestLevelIncrease =
     Boolean(suggestedLevelIncrease) &&
-    hasSixConsecutiveStrongCompletionWeeks(
+    hasConsecutiveStrongCompletionWeeks(
       history,
-      baseTrainingDaysPerWeek
+      baseTrainingDaysPerWeek,
+      levelIncreaseStreakWeeksRequired
     );
   const levelIncreasePromptNever = preferences.levelIncreasePromptNever ?? false;
   const levelIncreasePromptEveryDays =
@@ -525,6 +591,7 @@ export function generateWorkout(
       suggestedLevelIncrease,
       levelIncreasePromptEveryDays,
       levelIncreasePromptNever,
+      levelIncreaseStreakWeeksRequired,
     },
     today: todayPlan,
     week,
