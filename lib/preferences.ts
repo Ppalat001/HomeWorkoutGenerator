@@ -16,6 +16,9 @@ type UserPreferencesDocument = {
   sessionIncreasePromptNever?: boolean;
   sessionIncreasePromptEveryDays?: number;
   sessionIncreasePromptNextAt?: Date | null;
+  levelIncreasePromptNever?: boolean;
+  levelIncreasePromptEveryDays?: number;
+  levelIncreasePromptNextAt?: Date | null;
   preferredTrainingDays: string[];
   workoutDurationMinutes: number;
   preferredExerciseTypes: string[];
@@ -36,6 +39,9 @@ function mapDoc(doc: UserPreferencesDocument): UserPreferences {
     sessionIncreasePromptNever: doc.sessionIncreasePromptNever,
     sessionIncreasePromptEveryDays: doc.sessionIncreasePromptEveryDays,
     sessionIncreasePromptNextAt: doc.sessionIncreasePromptNextAt ?? null,
+    levelIncreasePromptNever: doc.levelIncreasePromptNever,
+    levelIncreasePromptEveryDays: doc.levelIncreasePromptEveryDays,
+    levelIncreasePromptNextAt: doc.levelIncreasePromptNextAt ?? null,
     preferredTrainingDays: doc.preferredTrainingDays,
     workoutDurationMinutes: doc.workoutDurationMinutes,
     preferredExerciseTypes: doc.preferredExerciseTypes,
@@ -89,6 +95,9 @@ export async function createUserPreferences(
     sessionIncreasePromptNever: input.sessionIncreasePromptNever ?? false,
     sessionIncreasePromptEveryDays: input.sessionIncreasePromptEveryDays ?? 7,
     sessionIncreasePromptNextAt: input.sessionIncreasePromptNextAt ?? null,
+    levelIncreasePromptNever: input.levelIncreasePromptNever ?? false,
+    levelIncreasePromptEveryDays: input.levelIncreasePromptEveryDays ?? 7,
+    levelIncreasePromptNextAt: input.levelIncreasePromptNextAt ?? null,
     preferredTrainingDays: input.preferredTrainingDays,
     workoutDurationMinutes: input.workoutDurationMinutes,
     preferredExerciseTypes: input.preferredExerciseTypes,
@@ -114,6 +123,9 @@ export async function updateUserPreferencesPatch(
     sessionIncreasePromptNever?: boolean;
     sessionIncreasePromptEveryDays?: number;
     sessionIncreasePromptNextAt?: Date | null;
+    levelIncreasePromptNever?: boolean;
+    levelIncreasePromptEveryDays?: number;
+    levelIncreasePromptNextAt?: Date | null;
   }
 ): Promise<{ matchedCount: number }> {
   const client = await clientPromise;
@@ -124,6 +136,9 @@ export async function updateUserPreferencesPatch(
     sessionIncreasePromptNever?: boolean;
     sessionIncreasePromptEveryDays?: number;
     sessionIncreasePromptNextAt?: Date | null;
+    levelIncreasePromptNever?: boolean;
+    levelIncreasePromptEveryDays?: number;
+    levelIncreasePromptNextAt?: Date | null;
     updatedAt: Date;
   } = {
     updatedAt: new Date(),
@@ -145,6 +160,18 @@ export async function updateUserPreferencesPatch(
     patch.sessionIncreasePromptNextAt instanceof Date
   ) {
     setDoc.sessionIncreasePromptNextAt = patch.sessionIncreasePromptNextAt;
+  }
+  if (typeof patch.levelIncreasePromptNever === "boolean") {
+    setDoc.levelIncreasePromptNever = patch.levelIncreasePromptNever;
+  }
+  if (typeof patch.levelIncreasePromptEveryDays === "number") {
+    setDoc.levelIncreasePromptEveryDays = patch.levelIncreasePromptEveryDays;
+  }
+  if (
+    patch.levelIncreasePromptNextAt === null ||
+    patch.levelIncreasePromptNextAt instanceof Date
+  ) {
+    setDoc.levelIncreasePromptNextAt = patch.levelIncreasePromptNextAt;
   }
   const result = await db.collection(USER_PREFERENCES_COLLECTION).updateOne(
     { userId: new ObjectId(userId) },

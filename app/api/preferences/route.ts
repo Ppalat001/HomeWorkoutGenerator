@@ -28,6 +28,9 @@ export async function PATCH(req: Request) {
     const sessionIncreasePromptNeverRaw = body.sessionIncreasePromptNever;
     const sessionIncreasePromptEveryDaysRaw = body.sessionIncreasePromptEveryDays;
     const sessionIncreasePromptNextAtRaw = body.sessionIncreasePromptNextAt;
+    const levelIncreasePromptNeverRaw = body.levelIncreasePromptNever;
+    const levelIncreasePromptEveryDaysRaw = body.levelIncreasePromptEveryDays;
+    const levelIncreasePromptNextAtRaw = body.levelIncreasePromptNextAt;
 
     const patch: {
       fitnessLevel?: AdaptiveLevel;
@@ -35,6 +38,9 @@ export async function PATCH(req: Request) {
       sessionIncreasePromptNever?: boolean;
       sessionIncreasePromptEveryDays?: number;
       sessionIncreasePromptNextAt?: Date | null;
+      levelIncreasePromptNever?: boolean;
+      levelIncreasePromptEveryDays?: number;
+      levelIncreasePromptNextAt?: Date | null;
     } = {};
 
     if (typeof fitnessLevel !== "undefined") {
@@ -92,6 +98,39 @@ export async function PATCH(req: Request) {
           );
         }
         patch.sessionIncreasePromptNextAt = date;
+      }
+    }
+
+    if (typeof levelIncreasePromptNeverRaw !== "undefined") {
+      patch.levelIncreasePromptNever = Boolean(levelIncreasePromptNeverRaw);
+    }
+
+    if (typeof levelIncreasePromptEveryDaysRaw !== "undefined") {
+      const levelIncreasePromptEveryDays = Number(levelIncreasePromptEveryDaysRaw);
+      if (
+        !Number.isFinite(levelIncreasePromptEveryDays) ||
+        ![1, 7, 30].includes(levelIncreasePromptEveryDays)
+      ) {
+        return NextResponse.json(
+          { error: "levelIncreasePromptEveryDays must be one of 1, 7, or 30" },
+          { status: 400 }
+        );
+      }
+      patch.levelIncreasePromptEveryDays = levelIncreasePromptEveryDays;
+    }
+
+    if (typeof levelIncreasePromptNextAtRaw !== "undefined") {
+      if (levelIncreasePromptNextAtRaw === null) {
+        patch.levelIncreasePromptNextAt = null;
+      } else {
+        const date = new Date(String(levelIncreasePromptNextAtRaw));
+        if (Number.isNaN(date.getTime())) {
+          return NextResponse.json(
+            { error: "Invalid levelIncreasePromptNextAt" },
+            { status: 400 }
+          );
+        }
+        patch.levelIncreasePromptNextAt = date;
       }
     }
 

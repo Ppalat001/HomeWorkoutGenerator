@@ -129,7 +129,15 @@ export default function DashboardInteractive({
   const [promptEveryDays, setPromptEveryDays] = useState(
     consistency.sessionIncreasePromptEveryDays
   );
+  const [levelPromptEveryDays, setLevelPromptEveryDays] = useState(
+    consistency.levelIncreasePromptEveryDays
+  );
   const [isSavingReminderSettings, setIsSavingReminderSettings] = useState(false);
+  const [isUpdatingLevelPrompt, setIsUpdatingLevelPrompt] = useState(false);
+  const [isSavingLevelReminderSettings, setIsSavingLevelReminderSettings] =
+    useState(false);
+  const [levelPromptError, setLevelPromptError] = useState("");
+  const [levelPromptMessage, setLevelPromptMessage] = useState("");
   const [rescheduleMessage, setRescheduleMessage] = useState("");
   const pendingScrollRestore = useRef<number | null>(null);
   useEffect(() => {
@@ -147,6 +155,9 @@ export default function DashboardInteractive({
   useEffect(() => {
     setPromptEveryDays(consistency.sessionIncreasePromptEveryDays);
   }, [consistency.sessionIncreasePromptEveryDays]);
+  useEffect(() => {
+    setLevelPromptEveryDays(consistency.levelIncreasePromptEveryDays);
+  }, [consistency.levelIncreasePromptEveryDays]);
 
   const selectDay = useCallback((idx: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -431,6 +442,200 @@ export default function DashboardInteractive({
     }
   }, [consistency.baseTrainingDaysPerWeek, isSavingReminderSettings, router]);
 
+  const suggestedLevelIncreaseLabel = useMemo(() => {
+    const v = consistency.suggestedLevelIncrease;
+    if (!v) return "";
+    return LEVEL_OPTIONS.find((o) => o.value === v)?.label ?? v;
+  }, [consistency.suggestedLevelIncrease]);
+
+  const handleLevelIncreaseAccept = useCallback(async () => {
+    const next = consistency.suggestedLevelIncrease;
+    if (!next || isUpdatingLevelPrompt || isUpdatingLevel) return;
+    const prevLevel = level;
+    setLevel(next);
+    setIsUpdatingLevelPrompt(true);
+    setLevelPromptError("");
+    setLevelPromptMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fitnessLevel: next,
+          levelIncreasePromptNextAt: null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setLevel(prevLevel);
+        setLevelPromptError(data.error || "Could not update level");
+        return;
+      }
+      setLevelPromptMessage(`Level updated to ${suggestedLevelIncreaseLabel}.`);
+      router.refresh();
+    } catch {
+      setLevel(prevLevel);
+      setLevelPromptError("Could not update level");
+    } finally {
+      setIsUpdatingLevelPrompt(false);
+    }
+  }, [
+    consistency.suggestedLevelIncrease,
+    isUpdatingLevel,
+    isUpdatingLevelPrompt,
+    level,
+    router,
+    suggestedLevelIncreaseLabel,
+  ]);
+
+  const postponeLevelIncreasePrompt = useCallback(async () => {
+    if (isUpdatingLevelPrompt) return;
+    setIsUpdatingLevelPrompt(true);
+    setLevelPromptError("");
+    setLevelPromptMessage("");
+    const nextAt = new Date();
+    nextAt.setDate(nextAt.getDate() + levelPromptEveryDays);
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          levelIncreasePromptEveryDays: levelPromptEveryDays,
+          levelIncreasePromptNever: false,
+          levelIncreasePromptNextAt: nextAt.toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setLevelPromptError(data.error || "Could not update reminder timing");
+        return;
+      }
+      const cadence =
+        levelPromptEveryDays === 1
+          ? "1 day"
+          : levelPromptEveryDays === 7
+            ? "1 week"
+            : "1 month";
+      setLevelPromptMessage(`Okay — we will ask again in about ${cadence}.`);
+      router.refresh();
+    } catch {
+      setLevelPromptError("Could not update reminder timing");
+    } finally {
+      setIsUpdatingLevelPrompt(false);
+    }
+  }, [isUpdatingLevelPrompt, levelPromptEveryDays, router]);
+
+  const disableLevelIncreasePrompt = useCallback(async () => {
+    if (isUpdatingLevelPrompt) return;
+    setIsUpdatingLevelPrompt(true);
+    setLevelPromptError("");
+    setLevelPromptMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          levelIncreasePromptNever: true,
+          levelIncreasePromptNextAt: null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setLevelPromptError(data.error || "Could not disable reminders");
+        return;
+      }
+      setLevelPromptMessage("Level increase reminders are turned off.");
+      router.refresh();
+    } catch {
+      setLevelPromptError("Could not disable reminders");
+    } finally {
+      setIsUpdatingLevelPrompt(false);
+    }
+  }, [isUpdatingLevelPrompt, router]);
+
+  const restoreLevelIncreasePrompt = useCallback(async () => {
+    if (isUpdatingLevelPrompt) return;
+    setIsUpdatingLevelPrompt(true);
+    setLevelPromptError("");
+    setLevelPromptMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          levelIncreasePromptNever: false,
+          levelIncreasePromptNextAt: new Date().toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setLevelPromptError(data.error || "Could not re-enable reminders");
+        return;
+      }
+      setLevelPromptMessage("Level increase reminders are on again.");
+      router.refresh();
+    } catch {
+      setLevelPromptError("Could not re-enable reminders");
+    } finally {
+      setIsUpdatingLevelPrompt(false);
+    }
+  }, [isUpdatingLevelPrompt, router]);
+
+  const saveLevelReminderCadence = useCallback(async () => {
+    if (isSavingLevelReminderSettings) return;
+    setIsSavingLevelReminderSettings(true);
+    setLevelPromptError("");
+    setLevelPromptMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          levelIncreasePromptEveryDays: levelPromptEveryDays,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setLevelPromptError(data.error || "Could not save reminder cadence");
+        return;
+      }
+      setLevelPromptMessage("Level reminder cadence saved.");
+      router.refresh();
+    } catch {
+      setLevelPromptError("Could not save reminder cadence");
+    } finally {
+      setIsSavingLevelReminderSettings(false);
+    }
+  }, [isSavingLevelReminderSettings, levelPromptEveryDays, router]);
+
+  const showLevelIncreasePromptNow = useCallback(async () => {
+    if (isSavingLevelReminderSettings) return;
+    setIsSavingLevelReminderSettings(true);
+    setLevelPromptError("");
+    setLevelPromptMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          levelIncreasePromptNever: false,
+          levelIncreasePromptNextAt: new Date().toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setLevelPromptError(data.error || "Could not show prompt now");
+        return;
+      }
+      setLevelPromptMessage("Level prompt is available again now.");
+      router.refresh();
+    } catch {
+      setLevelPromptError("Could not show prompt now");
+    } finally {
+      setIsSavingLevelReminderSettings(false);
+    }
+  }, [isSavingLevelReminderSettings, router]);
+
   const resetSessionsToOnboarding = useCallback(async () => {
     if (isSavingReminderSettings) return;
     setIsSavingReminderSettings(true);
@@ -478,6 +683,8 @@ export default function DashboardInteractive({
                 {consistency.completedThisWeek} / {consistency.weeklyTarget} workouts
               </p>
               <p className="mt-2 text-sm text-white/75">{consistency.reminder}</p>
+              {consistency.hasFourWeeksWorkoutHistory && (
+                <>
               {consistency.showSessionIncreasePrompt &&
                 consistency.suggestedTrainingDaysPerWeek && (
                   <div className="mt-3 rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-3">
@@ -600,6 +807,8 @@ export default function DashboardInteractive({
                     )}
                 </div>
               </div>
+                </>
+              )}
             </div>
             <div className="rounded-xl border border-white/10 bg-[#07142f]/50 px-4 py-3 text-right">
               <p className="text-xs uppercase tracking-wide text-white/55">Current streak</p>
@@ -695,6 +904,130 @@ export default function DashboardInteractive({
               <p className="mt-2 text-xs text-red-200">{levelError}</p>
             )}
           </div>
+
+          {consistency.showLevelIncreasePrompt &&
+            consistency.suggestedLevelIncrease && (
+              <div className="mt-4 rounded-xl border border-violet-300/35 bg-violet-500/10 p-3">
+                <p className="text-xs text-violet-100">
+                  You have completed at least 85% of planned sessions for 6
+                  consecutive weeks. Increase difficulty from{" "}
+                  <span className="font-semibold text-white">{levelLabel}</span>{" "}
+                  to{" "}
+                  <span className="font-semibold text-white">
+                    {suggestedLevelIncreaseLabel}
+                  </span>
+                  , or keep your current level?
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleLevelIncreaseAccept}
+                    disabled={isUpdatingLevelPrompt}
+                    className="rounded-lg border border-violet-300/50 bg-violet-500/25 px-3 py-1.5 text-xs font-semibold text-violet-50 transition hover:bg-violet-500/35 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isUpdatingLevelPrompt ? "Updating..." : `Yes, go to ${suggestedLevelIncreaseLabel}`}
+                  </button>
+                  <select
+                    value={levelPromptEveryDays}
+                    disabled={isUpdatingLevelPrompt}
+                    onChange={(e) =>
+                      setLevelPromptEveryDays(Number(e.target.value))
+                    }
+                    className="rounded-lg border border-white/20 bg-[#0b1535] px-2 py-1.5 text-xs text-slate-100 outline-none [color-scheme:dark]"
+                  >
+                    <option value={1}>Remind every day</option>
+                    <option value={7}>Remind every week</option>
+                    <option value={30}>Remind every month</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={postponeLevelIncreasePrompt}
+                    disabled={isUpdatingLevelPrompt}
+                    className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    Stay on {levelLabel} — remind me later
+                  </button>
+                  <button
+                    type="button"
+                    onClick={disableLevelIncreasePrompt}
+                    disabled={isUpdatingLevelPrompt}
+                    className="rounded-lg border border-white/20 bg-transparent px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    Never show again
+                  </button>
+                </div>
+              </div>
+            )}
+
+          {consistency.canSuggestLevelIncrease &&
+            consistency.levelIncreasePromptNever && (
+              <div className="mt-4 rounded-xl border border-white/15 bg-white/5 p-3">
+                <p className="text-xs text-white/75">
+                  Level increase reminders are off. You can turn them back on if
+                  you change your mind.
+                </p>
+                <button
+                  type="button"
+                  onClick={restoreLevelIncreasePrompt}
+                  disabled={isUpdatingLevelPrompt}
+                  className="mt-2 rounded-lg border border-violet-300/40 bg-violet-500/15 px-3 py-1.5 text-xs font-semibold text-violet-50 transition hover:bg-violet-500/25 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  Revert choice — show level prompts again
+                </button>
+              </div>
+            )}
+
+          <div className="mt-4 rounded-xl border border-white/15 bg-white/5 p-3">
+            <p className="text-xs text-white/75">
+              Level increase reminder settings (after a 6-week strong streak)
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <select
+                value={levelPromptEveryDays}
+                disabled={isSavingLevelReminderSettings}
+                onChange={(e) =>
+                  setLevelPromptEveryDays(Number(e.target.value))
+                }
+                className="rounded-lg border border-white/20 bg-[#0b1535] px-2 py-1.5 text-xs text-slate-100 outline-none [color-scheme:dark]"
+              >
+                <option value={1}>Every day</option>
+                <option value={7}>Every week</option>
+                <option value={30}>Every month</option>
+              </select>
+              <button
+                type="button"
+                onClick={saveLevelReminderCadence}
+                disabled={isSavingLevelReminderSettings}
+                className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSavingLevelReminderSettings ? "Saving..." : "Save cadence"}
+              </button>
+              <button
+                type="button"
+                onClick={showLevelIncreasePromptNow}
+                disabled={isSavingLevelReminderSettings}
+                className="rounded-lg border border-violet-300/40 bg-violet-500/15 px-3 py-1.5 text-xs font-semibold text-violet-50 transition hover:bg-violet-500/25 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Show level prompt now
+              </button>
+              <button
+                type="button"
+                onClick={restoreLevelIncreasePrompt}
+                disabled={isSavingLevelReminderSettings || isUpdatingLevelPrompt}
+                className="rounded-lg border border-white/20 bg-transparent px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Revert &quot;never&quot; / snooze
+              </button>
+            </div>
+          </div>
+
+          {levelPromptError && (
+            <p className="mt-2 text-xs text-red-200">{levelPromptError}</p>
+          )}
+          {levelPromptMessage && (
+            <p className="mt-2 text-xs text-emerald-200">{levelPromptMessage}</p>
+          )}
+
           {isReturnWorkout && (
             <p className="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
               Return mode: your session can run lighter while you rebuild

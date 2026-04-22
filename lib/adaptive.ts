@@ -13,14 +13,16 @@ function normalizeLevel(value: string | undefined): AdaptiveLevel {
   return "beginner";
 }
 
-function bumpUp(level: AdaptiveLevel): AdaptiveLevel {
-  const i = ORDER.indexOf(level);
-  return ORDER[Math.min(i + 1, ORDER.length - 1)];
-}
-
 function bumpDown(level: AdaptiveLevel): AdaptiveLevel {
   const i = ORDER.indexOf(level);
   return ORDER[Math.max(i - 1, 0)];
+}
+
+/** Next difficulty tier, or null if already at the top. */
+export function nextAdaptiveLevelUp(level: AdaptiveLevel): AdaptiveLevel | null {
+  const i = ORDER.indexOf(level);
+  if (i >= ORDER.length - 1) return null;
+  return ORDER[i + 1];
 }
 
 function sortHistoryDesc(history: WorkoutHistoryEntry[]): WorkoutHistoryEntry[] {
@@ -66,29 +68,14 @@ export function computeAdaptiveLevel(
       (h) => h.completionRate < 0.4 || h.feedback === "hard"
     );
 
-  const last3 = sorted.slice(0, 3);
-  const shouldProgress =
-    last3.length === 3 &&
-    last3.every(
-      (h) =>
-        !h.skipped &&
-        h.completionRate >= 0.8 &&
-        h.feedback !== "hard"
-    );
-
   if (shouldRegress) {
     level = bumpDown(level);
     explanationParts.push(
       "The last two sessions looked very difficult or incomplete, so difficulty steps down one level."
     );
-  } else if (shouldProgress) {
-    level = bumpUp(level);
-    explanationParts.push(
-      "Your last three sessions were completed strongly without feeling too hard, so difficulty steps up one level."
-    );
   } else if (sorted.length > 0) {
     explanationParts.push(
-      "Recent performance is steady, so your level stays put until a clear streak appears."
+      "Level increases when you confirm it after sustained weekly completion, or you can change it anytime below."
     );
   }
 

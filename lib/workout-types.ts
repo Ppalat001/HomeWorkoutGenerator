@@ -28,6 +28,12 @@ export type UserPreferences = {
   sessionIncreasePromptEveryDays?: number;
   /** Earliest date/time when prompt can show again. */
   sessionIncreasePromptNextAt?: Date | null;
+  /** If true, hide level-increase prompt until user re-enables it. */
+  levelIncreasePromptNever?: boolean;
+  /** Reminder cadence in days when user postpones level prompt (1 = daily, 7 = weekly, 30 = monthly). */
+  levelIncreasePromptEveryDays?: number;
+  /** Earliest date/time when level-increase prompt can show again. */
+  levelIncreasePromptNextAt?: Date | null;
   /** Template weekdays spread from frequency; scheduling uses `trainingDaysPerWeek`. */
   preferredTrainingDays: string[];
   workoutDurationMinutes: number;

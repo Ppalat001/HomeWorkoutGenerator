@@ -1,4 +1,4 @@
-import { computeAdaptiveLevel, labelForLevel } from "@/lib/adaptive";
+import { computeAdaptiveLevel, labelForLevel, nextAdaptiveLevelUp } from "@/lib/adaptive";
 import { EXERCISES } from "@/lib/exercises";
 import { defaultTrainingWeekdayKeys } from "@/lib/training-week";
 import type {
@@ -61,6 +61,13 @@ export type ConsistencyPlan = {
   suggestedTrainingDaysPerWeek: number | null;
   sessionIncreasePromptEveryDays: number;
   sessionIncreasePromptNever: boolean;
+  /** True when history spans long enough to evaluate the 4-week / 90% session rule. */
+  hasFourWeeksWorkoutHistory: boolean;
+  canSuggestLevelIncrease: boolean;
+  showLevelIncreasePrompt: boolean;
+  suggestedLevelIncrease: AdaptiveLevel | null;
+  levelIncreasePromptEveryDays: number;
+  levelIncreasePromptNever: boolean;
 };
 
 function levelRank(level: AdaptiveLevel): number {
@@ -226,6 +233,20 @@ function weeklyCompletions(history: WorkoutHistoryEntry[], weeks: number): numbe
   return counts;
 }
 
+const MS_PER_DAY = 86_400_000;
+
+/** Earliest workout at least `minDays` ago (vs now), so we have enough timeline for multi-week rules. */
+function hasWorkoutHistorySpanningAtLeastDays(
+  history: WorkoutHistoryEntry[],
+  minDays: number
+): boolean {
+  if (history.length === 0) return false;
+  const earliestMs = Math.min(
+    ...history.map((h) => new Date(h.date).getTime())
+  );
+  return Date.now() - earliestMs >= minDays * MS_PER_DAY;
+}
+
 function hasFourConsecutiveHighCompletionWeeks(
   history: WorkoutHistoryEntry[],
   weeklyTarget: number
@@ -234,6 +255,16 @@ function hasFourConsecutiveHighCompletionWeeks(
   const last4Weeks = weeklyCompletions(history, 4);
   if (last4Weeks.length < 4) return false;
   return last4Weeks.every((completed) => completed / weeklyTarget > 0.9);
+}
+
+function hasSixConsecutiveStrongCompletionWeeks(
+  history: WorkoutHistoryEntry[],
+  weeklyTarget: number
+): boolean {
+  if (weeklyTarget <= 0) return false;
+  const last6Weeks = weeklyCompletions(history, 6);
+  if (last6Weeks.length < 6) return false;
+  return last6Weeks.every((completed) => completed / weeklyTarget >= 0.85);
 }
 
 function computeWeeklyTarget(
@@ -396,7 +427,12 @@ export function generateWorkout(
       }
     }
   }
+  const hasFourWeeksWorkoutHistory = hasWorkoutHistorySpanningAtLeastDays(
+    history,
+    28
+  );
   const canRequestSessionIncrease =
+    hasFourWeeksWorkoutHistory &&
     hasFourConsecutiveHighCompletionWeeks(history, weeklyTargetResult.target) &&
     baseTrainingDaysPerWeek < 5;
   const sessionIncreasePromptNever = preferences.sessionIncreasePromptNever ?? false;
@@ -412,6 +448,21 @@ export function generateWorkout(
   const suggestedTrainingDaysPerWeek = canRequestSessionIncrease
     ? Math.min(5, baseTrainingDaysPerWeek + 1)
     : null;
+
+  const suggestedLevelIncrease = nextAdaptiveLevelUp(adaptiveLevel);
+  const canSuggestLevelIncrease =
+    Boolean(suggestedLevelIncrease) &&
+    hasSixConsecutiveStrongCompletionWeeks(history, weeklyTargetResult.target);
+  const levelIncreasePromptNever = preferences.levelIncreasePromptNever ?? false;
+  const levelIncreasePromptEveryDays =
+    preferences.levelIncreasePromptEveryDays ?? 7;
+  const nextLevelPromptAt = preferences.levelIncreasePromptNextAt
+    ? new Date(preferences.levelIncreasePromptNextAt)
+    : null;
+  const showLevelIncreasePrompt =
+    canSuggestLevelIncrease &&
+    !levelIncreasePromptNever &&
+    (!nextLevelPromptAt || nextLevelPromptAt.getTime() <= Date.now());
 
   return {
     adaptiveLevel,
@@ -439,6 +490,12 @@ export function generateWorkout(
       suggestedTrainingDaysPerWeek,
       sessionIncreasePromptEveryDays,
       sessionIncreasePromptNever,
+      hasFourWeeksWorkoutHistory,
+      canSuggestLevelIncrease,
+      showLevelIncreasePrompt,
+      suggestedLevelIncrease,
+      levelIncreasePromptEveryDays,
+      levelIncreasePromptNever,
     },
     today: todayPlan,
     week,
