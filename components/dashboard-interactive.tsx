@@ -134,8 +134,6 @@ export default function DashboardInteractive({
   );
   const [isSavingReminderSettings, setIsSavingReminderSettings] = useState(false);
   const [isUpdatingLevelPrompt, setIsUpdatingLevelPrompt] = useState(false);
-  const [isSavingLevelReminderSettings, setIsSavingLevelReminderSettings] =
-    useState(false);
   const [levelPromptError, setLevelPromptError] = useState("");
   const [levelPromptMessage, setLevelPromptMessage] = useState("");
   const [rescheduleMessage, setRescheduleMessage] = useState("");
@@ -357,33 +355,6 @@ export default function DashboardInteractive({
     }
   }, [isUpdatingSessions, router]);
 
-  const saveReminderCadence = useCallback(async () => {
-    if (isSavingReminderSettings) return;
-    setIsSavingReminderSettings(true);
-    setSessionsError("");
-    setSessionsMessage("");
-    try {
-      const res = await fetch("/api/preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionIncreasePromptEveryDays: promptEveryDays,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSessionsError(data.error || "Could not save reminder cadence");
-        return;
-      }
-      setSessionsMessage(`Reminder cadence saved: every ${promptEveryDays} days.`);
-      router.refresh();
-    } catch {
-      setSessionsError("Could not save reminder cadence");
-    } finally {
-      setIsSavingReminderSettings(false);
-    }
-  }, [isSavingReminderSettings, promptEveryDays, router]);
-
   const showSessionIncreasePromptNow = useCallback(async () => {
     if (isSavingReminderSettings) return;
     setIsSavingReminderSettings(true);
@@ -581,36 +552,9 @@ export default function DashboardInteractive({
     }
   }, [isUpdatingLevelPrompt, router]);
 
-  const saveLevelReminderCadence = useCallback(async () => {
-    if (isSavingLevelReminderSettings) return;
-    setIsSavingLevelReminderSettings(true);
-    setLevelPromptError("");
-    setLevelPromptMessage("");
-    try {
-      const res = await fetch("/api/preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          levelIncreasePromptEveryDays: levelPromptEveryDays,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setLevelPromptError(data.error || "Could not save reminder cadence");
-        return;
-      }
-      setLevelPromptMessage("Level reminder cadence saved.");
-      router.refresh();
-    } catch {
-      setLevelPromptError("Could not save reminder cadence");
-    } finally {
-      setIsSavingLevelReminderSettings(false);
-    }
-  }, [isSavingLevelReminderSettings, levelPromptEveryDays, router]);
-
   const showLevelIncreasePromptNow = useCallback(async () => {
-    if (isSavingLevelReminderSettings) return;
-    setIsSavingLevelReminderSettings(true);
+    if (isUpdatingLevelPrompt) return;
+    setIsUpdatingLevelPrompt(true);
     setLevelPromptError("");
     setLevelPromptMessage("");
     try {
@@ -632,9 +576,9 @@ export default function DashboardInteractive({
     } catch {
       setLevelPromptError("Could not show prompt now");
     } finally {
-      setIsSavingLevelReminderSettings(false);
+      setIsUpdatingLevelPrompt(false);
     }
-  }, [isSavingLevelReminderSettings, router]);
+  }, [isUpdatingLevelPrompt, router]);
 
   const resetSessionsToOnboarding = useCallback(async () => {
     if (isSavingReminderSettings) return;
@@ -748,67 +692,59 @@ export default function DashboardInteractive({
                     </button>
                   </div>
                 )}
+              {consistency.canRequestSessionIncrease &&
+                !consistency.showSessionIncreasePrompt &&
+                !consistency.sessionIncreasePromptNever && (
+                  <div className="mt-3 rounded-xl border border-white/15 bg-white/5 p-3">
+                    <p className="text-xs text-white/70">
+                      You qualify for more weekly sessions — the prompt is
+                      snoozed until later.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={showSessionIncreasePromptNow}
+                      disabled={isUpdatingSessions}
+                      className="mt-2 rounded-lg border border-cyan-300/40 bg-cyan-500/15 px-3 py-1.5 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      Show session prompt now
+                    </button>
+                  </div>
+                )}
+                </>
+              )}
               {sessionsError && (
                 <p className="mt-2 text-xs text-red-200">{sessionsError}</p>
               )}
               {sessionsMessage && (
                 <p className="mt-2 text-xs text-emerald-200">{sessionsMessage}</p>
               )}
-              <div className="mt-3 rounded-xl border border-white/15 bg-white/5 p-3">
-                <p className="text-xs text-white/75">
-                  Session increase reminder settings
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <select
-                    value={promptEveryDays}
-                    disabled={isSavingReminderSettings}
-                    onChange={(e) => setPromptEveryDays(Number(e.target.value))}
-                    className="rounded-lg border border-white/20 bg-[#0b1535] px-2 py-1.5 text-xs text-slate-100 outline-none [color-scheme:dark]"
-                  >
-                    <option value={7}>Every 7 days</option>
-                    <option value={14}>Every 14 days</option>
-                    <option value={30}>Every 30 days</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={saveReminderCadence}
-                    disabled={isSavingReminderSettings}
-                    className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {isSavingReminderSettings ? "Saving..." : "Save cadence"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={showSessionIncreasePromptNow}
-                    disabled={isSavingReminderSettings}
-                    className="rounded-lg border border-cyan-300/40 bg-cyan-500/15 px-3 py-1.5 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    Show prompt now
-                  </button>
-                  <button
-                    type="button"
-                    onClick={decreaseSessionsByOne}
-                    disabled={isSavingReminderSettings || consistency.baseTrainingDaysPerWeek <= 2}
-                    className="rounded-lg border border-amber-300/40 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-50 transition hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Decrease by 1
-                  </button>
-                  {consistency.hasManualTrainingDaysOverride &&
-                    consistency.baseTrainingDaysPerWeek !==
-                      consistency.onboardingTrainingDaysPerWeek && (
-                      <button
-                        type="button"
-                        onClick={resetSessionsToOnboarding}
-                        disabled={isSavingReminderSettings}
-                        className="rounded-lg border border-white/20 bg-transparent px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Reset to onboarding ({consistency.onboardingTrainingDaysPerWeek})
-                      </button>
-                    )}
-                </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-white/50">
+                  Weekly sessions
+                </span>
+                <button
+                  type="button"
+                  onClick={decreaseSessionsByOne}
+                  disabled={
+                    isSavingReminderSettings || consistency.baseTrainingDaysPerWeek <= 2
+                  }
+                  className="rounded-lg border border-amber-300/40 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-50 transition hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  −1 day
+                </button>
+                {consistency.hasManualTrainingDaysOverride &&
+                  consistency.baseTrainingDaysPerWeek !==
+                    consistency.onboardingTrainingDaysPerWeek && (
+                    <button
+                      type="button"
+                      onClick={resetSessionsToOnboarding}
+                      disabled={isSavingReminderSettings}
+                      className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/75 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Reset to onboarding ({consistency.onboardingTrainingDaysPerWeek})
+                    </button>
+                  )}
               </div>
-                </>
-              )}
             </div>
             <div className="rounded-xl border border-white/10 bg-[#07142f]/50 px-4 py-3 text-right">
               <p className="text-xs uppercase tracking-wide text-white/55">Current streak</p>
@@ -979,50 +915,24 @@ export default function DashboardInteractive({
               </div>
             )}
 
-          <div className="mt-4 rounded-xl border border-white/15 bg-white/5 p-3">
-            <p className="text-xs text-white/75">
-              Level increase reminder settings (after a{" "}
-              {consistency.levelIncreaseStreakWeeksRequired}-week strong streak)
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <select
-                value={levelPromptEveryDays}
-                disabled={isSavingLevelReminderSettings}
-                onChange={(e) =>
-                  setLevelPromptEveryDays(Number(e.target.value))
-                }
-                className="rounded-lg border border-white/20 bg-[#0b1535] px-2 py-1.5 text-xs text-slate-100 outline-none [color-scheme:dark]"
-              >
-                <option value={1}>Every day</option>
-                <option value={7}>Every week</option>
-                <option value={30}>Every month</option>
-              </select>
-              <button
-                type="button"
-                onClick={saveLevelReminderCadence}
-                disabled={isSavingLevelReminderSettings}
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isSavingLevelReminderSettings ? "Saving..." : "Save cadence"}
-              </button>
-              <button
-                type="button"
-                onClick={showLevelIncreasePromptNow}
-                disabled={isSavingLevelReminderSettings}
-                className="rounded-lg border border-violet-300/40 bg-violet-500/15 px-3 py-1.5 text-xs font-semibold text-violet-50 transition hover:bg-violet-500/25 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                Show level prompt now
-              </button>
-              <button
-                type="button"
-                onClick={restoreLevelIncreasePrompt}
-                disabled={isSavingLevelReminderSettings || isUpdatingLevelPrompt}
-                className="rounded-lg border border-white/20 bg-transparent px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Revert &quot;never&quot; / snooze
-              </button>
-            </div>
-          </div>
+          {consistency.canSuggestLevelIncrease &&
+            !consistency.showLevelIncreasePrompt &&
+            !consistency.levelIncreasePromptNever && (
+              <div className="mt-4 rounded-xl border border-white/15 bg-white/5 p-3">
+                <p className="text-xs text-white/70">
+                  You qualify for a higher difficulty — the level prompt is
+                  snoozed until later.
+                </p>
+                <button
+                  type="button"
+                  onClick={showLevelIncreasePromptNow}
+                  disabled={isUpdatingLevelPrompt}
+                  className="mt-2 rounded-lg border border-violet-300/40 bg-violet-500/15 px-3 py-1.5 text-xs font-semibold text-violet-50 transition hover:bg-violet-500/25 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  Show level prompt now
+                </button>
+              </div>
+            )}
 
           {levelPromptError && (
             <p className="mt-2 text-xs text-red-200">{levelPromptError}</p>
