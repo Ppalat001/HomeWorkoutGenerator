@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/auth";
-import { createUserPreferences, updateUserFitnessLevel } from "@/lib/preferences";
+import {
+  createUserPreferences,
+  updateUserPreferencesPatch,
+} from "@/lib/preferences";
 import { defaultTrainingWeekdayKeys } from "@/lib/training-week";
 import type { AdaptiveLevel } from "@/lib/workout-types";
 
@@ -21,18 +24,85 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json();
     const fitnessLevel = body.fitnessLevel;
+    const manualTrainingDaysPerWeekRaw = body.manualTrainingDaysPerWeek;
+    const sessionIncreasePromptNeverRaw = body.sessionIncreasePromptNever;
+    const sessionIncreasePromptEveryDaysRaw = body.sessionIncreasePromptEveryDays;
+    const sessionIncreasePromptNextAtRaw = body.sessionIncreasePromptNextAt;
 
-    if (!isAdaptiveLevel(fitnessLevel)) {
+    const patch: {
+      fitnessLevel?: AdaptiveLevel;
+      manualTrainingDaysPerWeek?: number;
+      sessionIncreasePromptNever?: boolean;
+      sessionIncreasePromptEveryDays?: number;
+      sessionIncreasePromptNextAt?: Date | null;
+    } = {};
+
+    if (typeof fitnessLevel !== "undefined") {
+      if (!isAdaptiveLevel(fitnessLevel)) {
+        return NextResponse.json(
+          { error: "Invalid fitness level" },
+          { status: 400 }
+        );
+      }
+      patch.fitnessLevel = fitnessLevel;
+    }
+
+    if (typeof manualTrainingDaysPerWeekRaw !== "undefined") {
+      const manualTrainingDaysPerWeek = Number(manualTrainingDaysPerWeekRaw);
+      if (
+        !Number.isFinite(manualTrainingDaysPerWeek) ||
+        manualTrainingDaysPerWeek < 2 ||
+        manualTrainingDaysPerWeek > 5
+      ) {
+        return NextResponse.json(
+          { error: "manualTrainingDaysPerWeek must be between 2 and 5" },
+          { status: 400 }
+        );
+      }
+      patch.manualTrainingDaysPerWeek = manualTrainingDaysPerWeek;
+    }
+
+    if (typeof sessionIncreasePromptNeverRaw !== "undefined") {
+      patch.sessionIncreasePromptNever = Boolean(sessionIncreasePromptNeverRaw);
+    }
+
+    if (typeof sessionIncreasePromptEveryDaysRaw !== "undefined") {
+      const sessionIncreasePromptEveryDays = Number(sessionIncreasePromptEveryDaysRaw);
+      if (
+        !Number.isFinite(sessionIncreasePromptEveryDays) ||
+        ![7, 14, 30].includes(sessionIncreasePromptEveryDays)
+      ) {
+        return NextResponse.json(
+          { error: "sessionIncreasePromptEveryDays must be one of 7, 14, or 30" },
+          { status: 400 }
+        );
+      }
+      patch.sessionIncreasePromptEveryDays = sessionIncreasePromptEveryDays;
+    }
+
+    if (typeof sessionIncreasePromptNextAtRaw !== "undefined") {
+      if (sessionIncreasePromptNextAtRaw === null) {
+        patch.sessionIncreasePromptNextAt = null;
+      } else {
+        const date = new Date(String(sessionIncreasePromptNextAtRaw));
+        if (Number.isNaN(date.getTime())) {
+          return NextResponse.json(
+            { error: "Invalid sessionIncreasePromptNextAt" },
+            { status: 400 }
+          );
+        }
+        patch.sessionIncreasePromptNextAt = date;
+      }
+    }
+
+    if (Object.keys(patch).length === 0) {
       return NextResponse.json(
-        { error: "Invalid fitness level" },
+        { error: "No valid preference fields provided" },
         { status: 400 }
       );
     }
 
-    const { matchedCount } = await updateUserFitnessLevel(
-      session.user.id,
-      fitnessLevel
-    );
+    const { matchedCount } = await updateUserPreferencesPatch(session.user.id, patch);
 
     if (matchedCount === 0) {
       return NextResponse.json(

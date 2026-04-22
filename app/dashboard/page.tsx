@@ -56,6 +56,7 @@ export default async function DashboardPage() {
             displayLevel={plan.displayLevel}
             isReturnWorkout={plan.isReturnWorkout}
             explanation={plan.explanation}
+            consistency={plan.consistency}
           />
 
           {preferences.limitations.trim().length > 0 && (

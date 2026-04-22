@@ -12,6 +12,10 @@ type UserPreferencesDocument = {
   goal: string;
   fitnessLevel: AdaptiveLevel;
   trainingDaysPerWeek: number;
+  manualTrainingDaysPerWeek?: number;
+  sessionIncreasePromptNever?: boolean;
+  sessionIncreasePromptEveryDays?: number;
+  sessionIncreasePromptNextAt?: Date | null;
   preferredTrainingDays: string[];
   workoutDurationMinutes: number;
   preferredExerciseTypes: string[];
@@ -28,6 +32,10 @@ function mapDoc(doc: UserPreferencesDocument): UserPreferences {
     goal: doc.goal,
     fitnessLevel: doc.fitnessLevel,
     trainingDaysPerWeek: doc.trainingDaysPerWeek,
+    manualTrainingDaysPerWeek: doc.manualTrainingDaysPerWeek,
+    sessionIncreasePromptNever: doc.sessionIncreasePromptNever,
+    sessionIncreasePromptEveryDays: doc.sessionIncreasePromptEveryDays,
+    sessionIncreasePromptNextAt: doc.sessionIncreasePromptNextAt ?? null,
     preferredTrainingDays: doc.preferredTrainingDays,
     workoutDurationMinutes: doc.workoutDurationMinutes,
     preferredExerciseTypes: doc.preferredExerciseTypes,
@@ -77,6 +85,10 @@ export async function createUserPreferences(
     goal: input.goal,
     fitnessLevel: input.fitnessLevel,
     trainingDaysPerWeek: input.trainingDaysPerWeek,
+    manualTrainingDaysPerWeek: input.manualTrainingDaysPerWeek,
+    sessionIncreasePromptNever: input.sessionIncreasePromptNever ?? false,
+    sessionIncreasePromptEveryDays: input.sessionIncreasePromptEveryDays ?? 7,
+    sessionIncreasePromptNextAt: input.sessionIncreasePromptNextAt ?? null,
     preferredTrainingDays: input.preferredTrainingDays,
     workoutDurationMinutes: input.workoutDurationMinutes,
     preferredExerciseTypes: input.preferredExerciseTypes,
@@ -91,11 +103,52 @@ export async function updateUserFitnessLevel(
   userId: string,
   fitnessLevel: AdaptiveLevel
 ): Promise<{ matchedCount: number }> {
+  return updateUserPreferencesPatch(userId, { fitnessLevel });
+}
+
+export async function updateUserPreferencesPatch(
+  userId: string,
+  patch: {
+    fitnessLevel?: AdaptiveLevel;
+    manualTrainingDaysPerWeek?: number;
+    sessionIncreasePromptNever?: boolean;
+    sessionIncreasePromptEveryDays?: number;
+    sessionIncreasePromptNextAt?: Date | null;
+  }
+): Promise<{ matchedCount: number }> {
   const client = await clientPromise;
   const db = client.db(MONGODB_DB_NAME);
+  const setDoc: {
+    fitnessLevel?: AdaptiveLevel;
+    manualTrainingDaysPerWeek?: number;
+    sessionIncreasePromptNever?: boolean;
+    sessionIncreasePromptEveryDays?: number;
+    sessionIncreasePromptNextAt?: Date | null;
+    updatedAt: Date;
+  } = {
+    updatedAt: new Date(),
+  };
+  if (patch.fitnessLevel) {
+    setDoc.fitnessLevel = patch.fitnessLevel;
+  }
+  if (typeof patch.manualTrainingDaysPerWeek === "number") {
+    setDoc.manualTrainingDaysPerWeek = patch.manualTrainingDaysPerWeek;
+  }
+  if (typeof patch.sessionIncreasePromptNever === "boolean") {
+    setDoc.sessionIncreasePromptNever = patch.sessionIncreasePromptNever;
+  }
+  if (typeof patch.sessionIncreasePromptEveryDays === "number") {
+    setDoc.sessionIncreasePromptEveryDays = patch.sessionIncreasePromptEveryDays;
+  }
+  if (
+    patch.sessionIncreasePromptNextAt === null ||
+    patch.sessionIncreasePromptNextAt instanceof Date
+  ) {
+    setDoc.sessionIncreasePromptNextAt = patch.sessionIncreasePromptNextAt;
+  }
   const result = await db.collection(USER_PREFERENCES_COLLECTION).updateOne(
     { userId: new ObjectId(userId) },
-    { $set: { fitnessLevel, updatedAt: new Date() } }
+    { $set: setDoc }
   );
   return { matchedCount: result.matchedCount };
 }

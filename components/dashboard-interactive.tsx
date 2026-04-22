@@ -5,9 +5,11 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useEffect,
   useState,
 } from "react";
-import type { DayPlan } from "@/lib/generate-workout";
+import { useRouter } from "next/navigation";
+import type { ConsistencyPlan, DayPlan } from "@/lib/generate-workout";
 import type { AdaptiveLevel } from "@/lib/workout-types";
 import WorkoutFeedback from "@/components/workout-feedback";
 
@@ -80,19 +82,28 @@ function relocateTrainingRest(
 
 type Props = {
   initialWeek: DayPlan[];
+  consistency: ConsistencyPlan;
   adaptiveLevel: AdaptiveLevel;
   displayLevel: string;
   isReturnWorkout: boolean;
   explanation: string;
 };
 
+const LEVEL_OPTIONS: { value: AdaptiveLevel; label: string }[] = [
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "expert", label: "Expert" },
+];
+
 export default function DashboardInteractive({
   initialWeek,
+  consistency,
   adaptiveLevel,
   displayLevel,
   isReturnWorkout,
   explanation,
 }: Props) {
+  const router = useRouter();
   const todayIso = useMemo(() => localTodayIso(), []);
 
   const [week, setWeek] = useState<DayPlan[]>(() =>
@@ -109,7 +120,33 @@ export default function DashboardInteractive({
 
   const [selectedIndex, setSelectedIndex] = useState(initialSelected);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [level, setLevel] = useState<AdaptiveLevel>(adaptiveLevel);
+  const [isUpdatingLevel, setIsUpdatingLevel] = useState(false);
+  const [isUpdatingSessions, setIsUpdatingSessions] = useState(false);
+  const [levelError, setLevelError] = useState("");
+  const [sessionsError, setSessionsError] = useState("");
+  const [sessionsMessage, setSessionsMessage] = useState("");
+  const [promptEveryDays, setPromptEveryDays] = useState(
+    consistency.sessionIncreasePromptEveryDays
+  );
+  const [isSavingReminderSettings, setIsSavingReminderSettings] = useState(false);
+  const [rescheduleMessage, setRescheduleMessage] = useState("");
   const pendingScrollRestore = useRef<number | null>(null);
+  useEffect(() => {
+    setLevel(adaptiveLevel);
+    setLevelError("");
+  }, [adaptiveLevel]);
+  useEffect(() => {
+    setWeek(
+      initialWeek.map((d) => ({
+        ...d,
+        exercises: d.exercises.map((ex) => ({ ...ex })),
+      }))
+    );
+  }, [initialWeek]);
+  useEffect(() => {
+    setPromptEveryDays(consistency.sessionIncreasePromptEveryDays);
+  }, [consistency.sessionIncreasePromptEveryDays]);
 
   const selectDay = useCallback((idx: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -135,6 +172,8 @@ export default function DashboardInteractive({
     isViewingCalendarToday &&
     selected.isTrainingDay &&
     selected.exercises.length > 0;
+  const levelLabel =
+    LEVEL_OPTIONS.find((option) => option.value === level)?.label ?? displayLevel;
 
   const handleDrop = useCallback(
     (dropIdx: number, e: React.DragEvent) => {
@@ -148,14 +187,514 @@ export default function DashboardInteractive({
     []
   );
 
+  const handleLevelChange = useCallback(
+    async (nextLevel: AdaptiveLevel) => {
+      if (nextLevel === level || isUpdatingLevel) return;
+      const prevLevel = level;
+      setLevel(nextLevel);
+      setIsUpdatingLevel(true);
+      setLevelError("");
+
+      try {
+        const res = await fetch("/api/preferences", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fitnessLevel: nextLevel }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          setLevel(prevLevel);
+          setLevelError(data.error || "Could not update level");
+          return;
+        }
+
+        router.refresh();
+      } catch {
+        setLevel(prevLevel);
+        setLevelError("Could not update level");
+      } finally {
+        setIsUpdatingLevel(false);
+      }
+    },
+    [isUpdatingLevel, level, router]
+  );
+
+  const applySuggestedSwap = useCallback(() => {
+    const suggestion = consistency.suggestedSwap;
+    if (!suggestion) return;
+    const fromIdx = week.findIndex((d) => d.dateIso === suggestion.fromDateIso);
+    const toIdx = week.findIndex((d) => d.dateIso === suggestion.toDateIso);
+    if (fromIdx < 0 || toIdx < 0) return;
+    setWeek((prev) => relocateTrainingRest(prev, fromIdx, toIdx));
+    setSelectedIndex(toIdx);
+    setRescheduleMessage("Workout moved. Keep your consistency streak going.");
+  }, [consistency.suggestedSwap, week]);
+
+  const handleSessionIncreaseRequest = useCallback(async () => {
+    if (!consistency.suggestedTrainingDaysPerWeek || isUpdatingSessions) return;
+    setIsUpdatingSessions(true);
+    setSessionsError("");
+    setSessionsMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          manualTrainingDaysPerWeek: consistency.suggestedTrainingDaysPerWeek,
+          sessionIncreasePromptNextAt: null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSessionsError(data.error || "Could not update weekly sessions");
+        return;
+      }
+      setSessionsMessage("Weekly sessions increased. Your plan has been refreshed.");
+      router.refresh();
+    } catch {
+      setSessionsError("Could not update weekly sessions");
+    } finally {
+      setIsUpdatingSessions(false);
+    }
+  }, [consistency.suggestedTrainingDaysPerWeek, isUpdatingSessions, router]);
+
+  const postponeSessionIncreasePrompt = useCallback(async () => {
+    if (isUpdatingSessions) return;
+    setIsUpdatingSessions(true);
+    setSessionsError("");
+    setSessionsMessage("");
+    const nextAt = new Date();
+    nextAt.setDate(nextAt.getDate() + promptEveryDays);
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionIncreasePromptEveryDays: promptEveryDays,
+          sessionIncreasePromptNever: false,
+          sessionIncreasePromptNextAt: nextAt.toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSessionsError(data.error || "Could not update reminder timing");
+        return;
+      }
+      setSessionsMessage(`Okay, I will remind you again in ${promptEveryDays} days.`);
+      router.refresh();
+    } catch {
+      setSessionsError("Could not update reminder timing");
+    } finally {
+      setIsUpdatingSessions(false);
+    }
+  }, [isUpdatingSessions, promptEveryDays, router]);
+
+  const disableSessionIncreasePrompt = useCallback(async () => {
+    if (isUpdatingSessions) return;
+    setIsUpdatingSessions(true);
+    setSessionsError("");
+    setSessionsMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionIncreasePromptNever: true,
+          sessionIncreasePromptNextAt: null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSessionsError(data.error || "Could not disable reminders");
+        return;
+      }
+      setSessionsMessage("Session increase reminders are turned off.");
+      router.refresh();
+    } catch {
+      setSessionsError("Could not disable reminders");
+    } finally {
+      setIsUpdatingSessions(false);
+    }
+  }, [isUpdatingSessions, router]);
+
+  const restoreSessionIncreasePrompt = useCallback(async () => {
+    if (isUpdatingSessions) return;
+    setIsUpdatingSessions(true);
+    setSessionsError("");
+    setSessionsMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionIncreasePromptNever: false,
+          sessionIncreasePromptNextAt: new Date().toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSessionsError(data.error || "Could not re-enable reminders");
+        return;
+      }
+      setSessionsMessage("Session increase reminders are on again.");
+      router.refresh();
+    } catch {
+      setSessionsError("Could not re-enable reminders");
+    } finally {
+      setIsUpdatingSessions(false);
+    }
+  }, [isUpdatingSessions, router]);
+
+  const saveReminderCadence = useCallback(async () => {
+    if (isSavingReminderSettings) return;
+    setIsSavingReminderSettings(true);
+    setSessionsError("");
+    setSessionsMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionIncreasePromptEveryDays: promptEveryDays,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSessionsError(data.error || "Could not save reminder cadence");
+        return;
+      }
+      setSessionsMessage(`Reminder cadence saved: every ${promptEveryDays} days.`);
+      router.refresh();
+    } catch {
+      setSessionsError("Could not save reminder cadence");
+    } finally {
+      setIsSavingReminderSettings(false);
+    }
+  }, [isSavingReminderSettings, promptEveryDays, router]);
+
+  const showSessionIncreasePromptNow = useCallback(async () => {
+    if (isSavingReminderSettings) return;
+    setIsSavingReminderSettings(true);
+    setSessionsError("");
+    setSessionsMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionIncreasePromptNever: false,
+          sessionIncreasePromptNextAt: new Date().toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSessionsError(data.error || "Could not show prompt now");
+        return;
+      }
+      setSessionsMessage("Prompt is available again now.");
+      router.refresh();
+    } catch {
+      setSessionsError("Could not show prompt now");
+    } finally {
+      setIsSavingReminderSettings(false);
+    }
+  }, [isSavingReminderSettings, router]);
+
+  const decreaseSessionsByOne = useCallback(async () => {
+    if (isSavingReminderSettings) return;
+    const next = Math.max(2, consistency.baseTrainingDaysPerWeek - 1);
+    if (next === consistency.baseTrainingDaysPerWeek) return;
+    setIsSavingReminderSettings(true);
+    setSessionsError("");
+    setSessionsMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          manualTrainingDaysPerWeek: next,
+          sessionIncreasePromptNextAt: null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSessionsError(data.error || "Could not decrease weekly sessions");
+        return;
+      }
+      setSessionsMessage(`Weekly sessions decreased to ${next}.`);
+      router.refresh();
+    } catch {
+      setSessionsError("Could not decrease weekly sessions");
+    } finally {
+      setIsSavingReminderSettings(false);
+    }
+  }, [consistency.baseTrainingDaysPerWeek, isSavingReminderSettings, router]);
+
+  const resetSessionsToOnboarding = useCallback(async () => {
+    if (isSavingReminderSettings) return;
+    setIsSavingReminderSettings(true);
+    setSessionsError("");
+    setSessionsMessage("");
+    try {
+      const res = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          manualTrainingDaysPerWeek: consistency.onboardingTrainingDaysPerWeek,
+          sessionIncreasePromptNextAt: null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSessionsError(data.error || "Could not reset weekly sessions");
+        return;
+      }
+      setSessionsMessage(
+        `Weekly sessions reset to your onboarding value (${consistency.onboardingTrainingDaysPerWeek}).`
+      );
+      router.refresh();
+    } catch {
+      setSessionsError("Could not reset weekly sessions");
+    } finally {
+      setIsSavingReminderSettings(false);
+    }
+  }, [
+    consistency.onboardingTrainingDaysPerWeek,
+    isSavingReminderSettings,
+    router,
+  ]);
+
   return (
     <div className="space-y-8">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/90">
+                Consistency goal
+              </p>
+              <p className="mt-2 text-2xl font-bold">
+                {consistency.completedThisWeek} / {consistency.weeklyTarget} workouts
+              </p>
+              <p className="mt-2 text-sm text-white/75">{consistency.reminder}</p>
+              {consistency.showSessionIncreasePrompt &&
+                consistency.suggestedTrainingDaysPerWeek && (
+                  <div className="mt-3 rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-3">
+                    <p className="text-xs text-emerald-100">
+                      You have completed over 90% of sessions for 4 consecutive
+                      weeks. Increase weekly sessions from{" "}
+                      {consistency.baseTrainingDaysPerWeek} to{" "}
+                      {consistency.suggestedTrainingDaysPerWeek}?
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSessionIncreaseRequest}
+                        disabled={isUpdatingSessions}
+                        className="rounded-lg border border-emerald-300/50 bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-50 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {isUpdatingSessions ? "Updating..." : "Yes, increase sessions"}
+                      </button>
+                      <select
+                        value={promptEveryDays}
+                        disabled={isUpdatingSessions}
+                        onChange={(e) => setPromptEveryDays(Number(e.target.value))}
+                        className="rounded-lg border border-white/20 bg-[#0b1535] px-2 py-1.5 text-xs text-slate-100 outline-none [color-scheme:dark]"
+                      >
+                        <option value={7}>Remind every 7 days</option>
+                        <option value={14}>Remind every 14 days</option>
+                        <option value={30}>Remind every 30 days</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={postponeSessionIncreasePrompt}
+                        disabled={isUpdatingSessions}
+                        className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        Remind me later
+                      </button>
+                      <button
+                        type="button"
+                        onClick={disableSessionIncreasePrompt}
+                        disabled={isUpdatingSessions}
+                        className="rounded-lg border border-white/20 bg-transparent px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        Never show again
+                      </button>
+                    </div>
+                  </div>
+                )}
+              {consistency.canRequestSessionIncrease &&
+                consistency.sessionIncreasePromptNever && (
+                  <div className="mt-3 rounded-xl border border-white/15 bg-white/5 p-3">
+                    <p className="text-xs text-white/75">
+                      Session increase reminders are off.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={restoreSessionIncreasePrompt}
+                      disabled={isUpdatingSessions}
+                      className="mt-2 rounded-lg border border-cyan-300/40 bg-cyan-500/15 px-3 py-1.5 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      Turn reminders back on
+                    </button>
+                  </div>
+                )}
+              {sessionsError && (
+                <p className="mt-2 text-xs text-red-200">{sessionsError}</p>
+              )}
+              {sessionsMessage && (
+                <p className="mt-2 text-xs text-emerald-200">{sessionsMessage}</p>
+              )}
+              <div className="mt-3 rounded-xl border border-white/15 bg-white/5 p-3">
+                <p className="text-xs text-white/75">
+                  Session increase reminder settings
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <select
+                    value={promptEveryDays}
+                    disabled={isSavingReminderSettings}
+                    onChange={(e) => setPromptEveryDays(Number(e.target.value))}
+                    className="rounded-lg border border-white/20 bg-[#0b1535] px-2 py-1.5 text-xs text-slate-100 outline-none [color-scheme:dark]"
+                  >
+                    <option value={7}>Every 7 days</option>
+                    <option value={14}>Every 14 days</option>
+                    <option value={30}>Every 30 days</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={saveReminderCadence}
+                    disabled={isSavingReminderSettings}
+                    className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isSavingReminderSettings ? "Saving..." : "Save cadence"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={showSessionIncreasePromptNow}
+                    disabled={isSavingReminderSettings}
+                    className="rounded-lg border border-cyan-300/40 bg-cyan-500/15 px-3 py-1.5 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    Show prompt now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={decreaseSessionsByOne}
+                    disabled={isSavingReminderSettings || consistency.baseTrainingDaysPerWeek <= 2}
+                    className="rounded-lg border border-amber-300/40 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-50 transition hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Decrease by 1
+                  </button>
+                  {consistency.hasManualTrainingDaysOverride &&
+                    consistency.baseTrainingDaysPerWeek !==
+                      consistency.onboardingTrainingDaysPerWeek && (
+                      <button
+                        type="button"
+                        onClick={resetSessionsToOnboarding}
+                        disabled={isSavingReminderSettings}
+                        className="rounded-lg border border-white/20 bg-transparent px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Reset to onboarding ({consistency.onboardingTrainingDaysPerWeek})
+                      </button>
+                    )}
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#07142f]/50 px-4 py-3 text-right">
+              <p className="text-xs uppercase tracking-wide text-white/55">Current streak</p>
+              <p className="text-xl font-semibold">{consistency.streakCount}</p>
+            </div>
+          </div>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+            <div
+              className={`h-full ${
+                consistency.atRisk ? "bg-amber-400" : "bg-cyan-400"
+              }`}
+              style={{
+                width: `${Math.min(100, Math.round(consistency.completionRate * 100))}%`,
+              }}
+            />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {consistency.dayStatuses.map((day) => {
+              const tone =
+                day.status === "completed"
+                  ? "border-emerald-300/50 bg-emerald-500/25 text-emerald-100"
+                  : day.status === "skipped"
+                    ? "border-rose-300/50 bg-rose-500/25 text-rose-100"
+                    : day.status === "planned"
+                      ? "border-cyan-300/50 bg-cyan-500/20 text-cyan-100"
+                      : "border-white/10 bg-white/5 text-white/55";
+              return (
+                <span
+                  key={day.dateIso}
+                  className={`rounded-lg border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${tone}`}
+                  title={day.dateIso}
+                >
+                  {day.weekdayKey.slice(0, 3)} · {day.status}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
+          <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/90">
+            Adaptive duration
+          </p>
+          <p className="mt-2 text-3xl font-bold">
+            {consistency.suggestedDurationMinutes} min
+          </p>
+          <p className="mt-2 text-sm text-white/75">
+            {consistency.durationDeltaMinutes === 0
+              ? "Session length stays stable this week."
+              : consistency.durationDeltaMinutes > 0
+                ? `Increased by ${consistency.durationDeltaMinutes} min for progress momentum.`
+                : `Reduced by ${Math.abs(consistency.durationDeltaMinutes)} min to rebuild adherence.`}
+          </p>
+          {consistency.suggestedSwap && (
+            <button
+              type="button"
+              onClick={applySuggestedSwap}
+              className="mt-4 rounded-xl border border-cyan-300/50 bg-cyan-500/20 px-3 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-500/30"
+            >
+              Move skipped workout to suggested rest day
+            </button>
+          )}
+          {rescheduleMessage && (
+            <p className="mt-3 text-xs text-emerald-200">{rescheduleMessage}</p>
+          )}
+        </div>
+      </div>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md lg:col-span-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200/90">
             Current adaptive level
           </p>
-          <p className="mt-2 text-3xl font-bold">{displayLevel}</p>
+          <p className="mt-2 text-3xl font-bold">{levelLabel}</p>
+          <div className="mt-4">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/70">
+              Change level
+            </label>
+            <select
+              value={level}
+              disabled={isUpdatingLevel}
+              onChange={(e) => handleLevelChange(e.target.value as AdaptiveLevel)}
+              className="w-full rounded-xl border border-white/20 bg-[#0b1535] px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-70 [color-scheme:dark]"
+            >
+              {LEVEL_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {isUpdatingLevel && (
+              <p className="mt-2 text-xs text-cyan-200">Updating level...</p>
+            )}
+            {levelError && (
+              <p className="mt-2 text-xs text-red-200">{levelError}</p>
+            )}
+          </div>
           {isReturnWorkout && (
             <p className="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
               Return mode: your session can run lighter while you rebuild

@@ -20,6 +20,14 @@ export type UserPreferences = {
   goal: string;
   fitnessLevel: AdaptiveLevel;
   trainingDaysPerWeek: number;
+  /** User-accepted override after sustained consistency streaks. */
+  manualTrainingDaysPerWeek?: number;
+  /** If true, hide session-increase prompt until user re-enables it. */
+  sessionIncreasePromptNever?: boolean;
+  /** Reminder cadence in days when user postpones prompt. */
+  sessionIncreasePromptEveryDays?: number;
+  /** Earliest date/time when prompt can show again. */
+  sessionIncreasePromptNextAt?: Date | null;
   /** Template weekdays spread from frequency; scheduling uses `trainingDaysPerWeek`. */
   preferredTrainingDays: string[];
   workoutDurationMinutes: number;
