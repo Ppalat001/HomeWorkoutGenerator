@@ -257,14 +257,40 @@ function hasFourConsecutiveHighCompletionWeeks(
   return last4Weeks.every((completed) => completed / weeklyTarget > 0.9);
 }
 
+/**
+ * True when some block of six consecutive Monday-based weeks (each week
+ * ending after the user's first log) all have completed (non-skipped)
+ * sessions ≥ 85% of `weeklyPlanDays`. Sliding window handles accounts
+ * whose history does not align with "weeks 1–6 ago from today".
+ */
 function hasSixConsecutiveStrongCompletionWeeks(
   history: WorkoutHistoryEntry[],
-  weeklyTarget: number
+  weeklyPlanDays: number
 ): boolean {
-  if (weeklyTarget <= 0) return false;
-  const last6Weeks = weeklyCompletions(history, 6);
-  if (last6Weeks.length < 6) return false;
-  return last6Weeks.every((completed) => completed / weeklyTarget >= 0.85);
+  if (weeklyPlanDays <= 0 || history.length === 0) return false;
+  const earliestMs = Math.min(
+    ...history.map((h) => new Date(h.date).getTime())
+  );
+
+  const maxStart = 24;
+  for (let startW = 1; startW <= maxStart; startW += 1) {
+    let blockOk = true;
+    for (let j = 0; j < 6; j += 1) {
+      const w = startW + j;
+      const { start, endExclusive } = weekWindowMonday(w);
+      if (endExclusive.getTime() <= earliestMs) {
+        blockOk = false;
+        break;
+      }
+      const completed = completedCountInRange(history, start, endExclusive);
+      if (completed / weeklyPlanDays < 0.85) {
+        blockOk = false;
+        break;
+      }
+    }
+    if (blockOk) return true;
+  }
+  return false;
 }
 
 function computeWeeklyTarget(
@@ -452,7 +478,10 @@ export function generateWorkout(
   const suggestedLevelIncrease = nextAdaptiveLevelUp(adaptiveLevel);
   const canSuggestLevelIncrease =
     Boolean(suggestedLevelIncrease) &&
-    hasSixConsecutiveStrongCompletionWeeks(history, weeklyTargetResult.target);
+    hasSixConsecutiveStrongCompletionWeeks(
+      history,
+      baseTrainingDaysPerWeek
+    );
   const levelIncreasePromptNever = preferences.levelIncreasePromptNever ?? false;
   const levelIncreasePromptEveryDays =
     preferences.levelIncreasePromptEveryDays ?? 7;

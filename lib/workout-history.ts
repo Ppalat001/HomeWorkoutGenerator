@@ -34,7 +34,8 @@ function mapDoc(doc: WorkoutHistoryDocument): WorkoutHistoryEntry {
 
 export async function getWorkoutHistory(
   userId: string,
-  limit = 40
+  /** Needs enough rows for multi-week streaks (e.g. 6 weeks × several sessions). */
+  limit = 200
 ): Promise<WorkoutHistoryEntry[]> {
   const client = await clientPromise;
   const db = client.db(MONGODB_DB_NAME);
