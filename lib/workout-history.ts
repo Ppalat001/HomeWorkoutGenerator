@@ -6,6 +6,7 @@ import {
 } from "@/lib/db-names";
 import type {
   AdaptiveLevel,
+  ExerciseHeartRateEntry,
   WorkoutFeedback,
   WorkoutHistoryEntry,
 } from "@/lib/workout-types";
@@ -18,6 +19,7 @@ type WorkoutHistoryDocument = {
   completionRate: number;
   feedback: WorkoutFeedback | null;
   skipped: boolean;
+  exerciseHeartRates?: ExerciseHeartRateEntry[];
 };
 
 function mapDoc(doc: WorkoutHistoryDocument): WorkoutHistoryEntry {
@@ -29,6 +31,7 @@ function mapDoc(doc: WorkoutHistoryDocument): WorkoutHistoryEntry {
     completionRate: doc.completionRate,
     feedback: doc.feedback,
     skipped: doc.skipped,
+    exerciseHeartRates: doc.exerciseHeartRates,
   };
 }
 
@@ -56,16 +59,22 @@ export async function addWorkoutHistoryEntry(input: {
   completionRate: number;
   feedback: WorkoutFeedback | null;
   skipped: boolean;
+  exerciseHeartRates?: ExerciseHeartRateEntry[];
 }): Promise<void> {
   const client = await clientPromise;
   const db = client.db(MONGODB_DB_NAME);
 
-  await db.collection(WORKOUT_HISTORY_COLLECTION).insertOne({
+  const doc: Record<string, unknown> = {
     userId: new ObjectId(input.userId),
     date: input.date,
     adaptiveLevel: input.adaptiveLevel,
     completionRate: input.completionRate,
     feedback: input.feedback,
     skipped: input.skipped,
-  });
+  };
+  if (input.exerciseHeartRates && input.exerciseHeartRates.length > 0) {
+    doc.exerciseHeartRates = input.exerciseHeartRates;
+  }
+
+  await db.collection(WORKOUT_HISTORY_COLLECTION).insertOne(doc);
 }

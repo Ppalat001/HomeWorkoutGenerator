@@ -44,6 +44,16 @@ export type UserPreferences = {
   updatedAt: Date;
 };
 
+/** Per-exercise heart rate captured for a completed session (e.g. wearable samples). */
+export type ExerciseHeartRateEntry = {
+  exerciseId: string;
+  exerciseName?: string;
+  avgBpm: number;
+  maxBpm: number;
+  /** BPM samples during the exercise (e.g. one per 15–30s). */
+  bpmSeries: number[];
+};
+
 export type WorkoutHistoryEntry = {
   _id?: string;
   userId: string;
@@ -52,6 +62,7 @@ export type WorkoutHistoryEntry = {
   completionRate: number;
   feedback: WorkoutFeedback | null;
   skipped: boolean;
+  exerciseHeartRates?: ExerciseHeartRateEntry[];
 };
 
 export type PlannedExercise = Exercise & {

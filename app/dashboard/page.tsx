@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import DashboardInteractive from "@/components/dashboard-interactive";
 import LogoutButton from "@/components/logout-button";
 import { generateWorkout } from "@/lib/generate-workout";
+import { buildHeartRateInsightsMap } from "@/lib/heart-rate-insights";
 import { getUserPreferences } from "@/lib/preferences";
 import { getWorkoutHistory } from "@/lib/workout-history";
 
@@ -21,6 +22,10 @@ export default async function DashboardPage() {
 
   const history = await getWorkoutHistory(session.user.id);
   const plan = generateWorkout(preferences, history);
+  const exerciseIds = [
+    ...new Set(plan.week.flatMap((d) => d.exercises.map((ex) => ex.id))),
+  ];
+  const heartRateInsights = buildHeartRateInsightsMap(history, exerciseIds);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#020617] via-[#0b1b4d] to-[#152a68] text-white">
@@ -57,6 +62,7 @@ export default async function DashboardPage() {
             isReturnWorkout={plan.isReturnWorkout}
             explanation={plan.explanation}
             consistency={plan.consistency}
+            heartRateInsights={heartRateInsights}
           />
 
           {preferences.limitations.trim().length > 0 && (

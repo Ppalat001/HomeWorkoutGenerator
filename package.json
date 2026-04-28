@@ -6,7 +6,9 @@
     "dev": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:history": "node scripts/seed-six-weeks-history.mjs",
+    "seed:history:json": "node scripts/seed-six-weeks-history.mjs --emit-json"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
