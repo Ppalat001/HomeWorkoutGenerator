@@ -33,6 +33,12 @@ export default async function DashboardHeartHistoryPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
+              href="/dashboard/history/exercises"
+              className="rounded-xl border border-rose-400/40 bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-50 transition hover:bg-rose-500/25"
+            >
+              Which exercises had high HR?
+            </Link>
+            <Link
               href="/dashboard"
               className="rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-500/25"
             >

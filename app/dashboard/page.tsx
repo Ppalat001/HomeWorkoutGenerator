@@ -40,6 +40,12 @@ export default async function DashboardPage() {
               Past sessions &amp; heart rate
             </Link>
             <Link
+              href="/dashboard/history/exercises"
+              className="rounded-xl border border-rose-400/40 bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-50 transition hover:bg-rose-500/25"
+            >
+              Which exercises had high HR?
+            </Link>
+            <Link
               href="/"
               className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10"
             >
