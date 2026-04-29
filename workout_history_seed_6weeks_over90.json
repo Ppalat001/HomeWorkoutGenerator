@@ -5,7 +5,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "ok",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "bodyweight-squat",
+        "exerciseName": "Bodyweight squat",
+        "avgBpm": 112,
+        "maxBpm": 124,
+        "bpmSeries": [102, 108, 115, 120, 124, 122, 118, 114, 110, 108, 105, 103, 104, 108, 112, 116]
+      },
+      {
+        "exerciseId": "wall-push-up",
+        "exerciseName": "Wall push-up",
+        "avgBpm": 98,
+        "maxBpm": 110,
+        "bpmSeries": [92, 95, 99, 104, 110, 108, 105, 100, 97, 94, 93, 95, 98, 100, 99, 97]
+      },
+      {
+        "exerciseId": "marching-in-place",
+        "exerciseName": "Marching in place",
+        "avgBpm": 118,
+        "maxBpm": 132,
+        "bpmSeries": [108, 114, 120, 126, 132, 128, 124, 120, 116, 114, 112, 115, 118, 120, 119, 117]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -13,7 +37,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "easy",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "forward-lunge",
+        "exerciseName": "Forward lunge",
+        "avgBpm": 108,
+        "maxBpm": 121,
+        "bpmSeries": [98, 102, 108, 114, 121, 118, 115, 110, 106, 104, 102, 105, 108, 110, 109, 107]
+      },
+      {
+        "exerciseId": "plank",
+        "exerciseName": "Forearm plank",
+        "avgBpm": 96,
+        "maxBpm": 106,
+        "bpmSeries": [90, 92, 95, 98, 102, 106, 104, 100, 97, 95, 94, 93, 95, 97, 96, 95]
+      },
+      {
+        "exerciseId": "basic-crunch",
+        "exerciseName": "Basic crunch",
+        "avgBpm": 102,
+        "maxBpm": 114,
+        "bpmSeries": [96, 99, 103, 108, 114, 111, 107, 104, 101, 99, 98, 100, 102, 104, 103, 101]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -21,7 +69,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "ok",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "jumping-jacks",
+        "exerciseName": "Jumping jacks",
+        "avgBpm": 128,
+        "maxBpm": 145,
+        "bpmSeries": [112, 118, 126, 132, 140, 145, 138, 132, 126, 122, 120, 124, 128, 130, 127, 125]
+      },
+      {
+        "exerciseId": "high-knees",
+        "exerciseName": "High knees",
+        "avgBpm": 134,
+        "maxBpm": 148,
+        "bpmSeries": [118, 125, 132, 138, 144, 148, 142, 136, 132, 128, 126, 130, 134, 136, 133, 131]
+      },
+      {
+        "exerciseId": "glute-bridge",
+        "exerciseName": "Glute bridge",
+        "avgBpm": 100,
+        "maxBpm": 112,
+        "bpmSeries": [94, 97, 101, 105, 112, 109, 106, 102, 99, 97, 96, 98, 100, 102, 101, 99]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -29,7 +101,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "ok",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "standard-push-up",
+        "exerciseName": "Standard push-up",
+        "avgBpm": 110,
+        "maxBpm": 122,
+        "bpmSeries": [100, 104, 110, 116, 122, 119, 115, 111, 108, 106, 105, 107, 110, 112, 111, 109]
+      },
+      {
+        "exerciseId": "bicycle-crunch",
+        "exerciseName": "Bicycle crunch",
+        "avgBpm": 104,
+        "maxBpm": 116,
+        "bpmSeries": [98, 101, 105, 110, 116, 113, 109, 106, 103, 101, 100, 102, 104, 106, 105, 103]
+      },
+      {
+        "exerciseId": "standing-calf-raise",
+        "exerciseName": "Standing calf raise",
+        "avgBpm": 94,
+        "maxBpm": 104,
+        "bpmSeries": [88, 90, 93, 96, 100, 104, 102, 98, 95, 93, 92, 93, 95, 96, 95, 94]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -37,7 +133,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "easy",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "bodyweight-squat",
+        "exerciseName": "Bodyweight squat",
+        "avgBpm": 114,
+        "maxBpm": 126,
+        "bpmSeries": [104, 110, 116, 122, 126, 123, 119, 115, 112, 110, 108, 110, 113, 115, 114, 112]
+      },
+      {
+        "exerciseId": "dumbbell-row",
+        "exerciseName": "Bent-over row",
+        "avgBpm": 106,
+        "maxBpm": 118,
+        "bpmSeries": [98, 102, 108, 114, 118, 115, 111, 107, 104, 102, 101, 103, 106, 108, 107, 105]
+      },
+      {
+        "exerciseId": "arm-circles",
+        "exerciseName": "Arm circles",
+        "avgBpm": 92,
+        "maxBpm": 102,
+        "bpmSeries": [86, 88, 91, 94, 98, 102, 100, 96, 93, 91, 90, 91, 93, 94, 93, 92]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -45,7 +165,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "ok",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "jump-squat",
+        "exerciseName": "Jump squat",
+        "avgBpm": 124,
+        "maxBpm": 140,
+        "bpmSeries": [108, 115, 122, 128, 136, 140, 134, 128, 124, 120, 118, 122, 126, 128, 125, 123]
+      },
+      {
+        "exerciseId": "burpee",
+        "exerciseName": "Burpee",
+        "avgBpm": 138,
+        "maxBpm": 156,
+        "bpmSeries": [118, 126, 135, 144, 152, 156, 148, 140, 134, 130, 128, 132, 136, 138, 135, 132]
+      },
+      {
+        "exerciseId": "v-sit-hold",
+        "exerciseName": "V-sit hold",
+        "avgBpm": 100,
+        "maxBpm": 112,
+        "bpmSeries": [94, 97, 101, 105, 112, 109, 105, 102, 99, 97, 96, 98, 100, 102, 101, 99]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -53,7 +197,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "ok",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "pull-up",
+        "exerciseName": "Pull-up",
+        "avgBpm": 116,
+        "maxBpm": 128,
+        "bpmSeries": [106, 110, 116, 122, 128, 125, 121, 117, 114, 112, 110, 112, 115, 117, 116, 114]
+      },
+      {
+        "exerciseId": "explosive-push-up",
+        "exerciseName": "Explosive push-up",
+        "avgBpm": 122,
+        "maxBpm": 136,
+        "bpmSeries": [108, 114, 120, 128, 136, 132, 126, 122, 118, 116, 115, 118, 122, 124, 121, 119]
+      },
+      {
+        "exerciseId": "dynamic-stretch-flow",
+        "exerciseName": "Dynamic stretch flow",
+        "avgBpm": 90,
+        "maxBpm": 98,
+        "bpmSeries": [84, 86, 88, 91, 94, 98, 96, 93, 91, 89, 88, 89, 90, 92, 91, 90]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -61,7 +229,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "easy",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "forward-lunge",
+        "exerciseName": "Forward lunge",
+        "avgBpm": 106,
+        "maxBpm": 118,
+        "bpmSeries": [98, 101, 106, 112, 118, 115, 110, 106, 103, 101, 100, 102, 105, 107, 106, 104]
+      },
+      {
+        "exerciseId": "marching-in-place",
+        "exerciseName": "Marching in place",
+        "avgBpm": 116,
+        "maxBpm": 130,
+        "bpmSeries": [104, 110, 116, 122, 130, 126, 122, 118, 114, 112, 110, 113, 116, 118, 117, 115]
+      },
+      {
+        "exerciseId": "basic-crunch",
+        "exerciseName": "Basic crunch",
+        "avgBpm": 100,
+        "maxBpm": 112,
+        "bpmSeries": [94, 97, 101, 106, 112, 109, 105, 102, 99, 97, 96, 98, 100, 102, 101, 99]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -69,7 +261,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "ok",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "bodyweight-squat",
+        "exerciseName": "Bodyweight squat",
+        "avgBpm": 111,
+        "maxBpm": 123,
+        "bpmSeries": [101, 107, 113, 119, 123, 120, 116, 112, 109, 107, 105, 107, 110, 112, 111, 109]
+      },
+      {
+        "exerciseId": "wall-push-up",
+        "exerciseName": "Wall push-up",
+        "avgBpm": 97,
+        "maxBpm": 108,
+        "bpmSeries": [91, 94, 98, 102, 108, 106, 102, 99, 96, 94, 93, 95, 97, 99, 98, 96]
+      },
+      {
+        "exerciseId": "plank",
+        "exerciseName": "Forearm plank",
+        "avgBpm": 95,
+        "maxBpm": 105,
+        "bpmSeries": [89, 91, 94, 97, 101, 105, 103, 99, 96, 94, 93, 94, 96, 97, 96, 95]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -77,7 +293,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "ok",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "jumping-jacks",
+        "exerciseName": "Jumping jacks",
+        "avgBpm": 126,
+        "maxBpm": 142,
+        "bpmSeries": [110, 117, 124, 130, 138, 142, 136, 130, 125, 122, 120, 123, 126, 128, 126, 124]
+      },
+      {
+        "exerciseId": "standard-push-up",
+        "exerciseName": "Standard push-up",
+        "avgBpm": 109,
+        "maxBpm": 120,
+        "bpmSeries": [100, 104, 109, 114, 120, 117, 113, 109, 106, 104, 103, 105, 108, 110, 109, 107]
+      },
+      {
+        "exerciseId": "bicycle-crunch",
+        "exerciseName": "Bicycle crunch",
+        "avgBpm": 103,
+        "maxBpm": 115,
+        "bpmSeries": [97, 100, 104, 109, 115, 112, 108, 105, 102, 100, 99, 101, 103, 105, 104, 102]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -85,7 +325,31 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "easy",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "high-knees",
+        "exerciseName": "High knees",
+        "avgBpm": 132,
+        "maxBpm": 146,
+        "bpmSeries": [116, 123, 130, 136, 144, 146, 140, 134, 130, 126, 124, 128, 132, 134, 131, 129]
+      },
+      {
+        "exerciseId": "glute-bridge",
+        "exerciseName": "Glute bridge",
+        "avgBpm": 99,
+        "maxBpm": 110,
+        "bpmSeries": [93, 96, 100, 104, 110, 107, 103, 100, 97, 95, 94, 96, 99, 101, 100, 98]
+      },
+      {
+        "exerciseId": "standing-calf-raise",
+        "exerciseName": "Standing calf raise",
+        "avgBpm": 93,
+        "maxBpm": 103,
+        "bpmSeries": [87, 89, 92, 95, 99, 103, 101, 97, 94, 92, 91, 92, 94, 95, 94, 93]
+      }
+    ]
   },
   {
     "userId": { "$oid": "69dd29e09551486ebe7a6db4" },
@@ -93,6 +357,30 @@
     "adaptiveLevel": "intermediate",
     "completionRate": 1,
     "feedback": "ok",
-    "skipped": false
+    "skipped": false,
+    "trackingStatus": "completed",
+    "exerciseHeartRates": [
+      {
+        "exerciseId": "forward-lunge",
+        "exerciseName": "Forward lunge",
+        "avgBpm": 107,
+        "maxBpm": 119,
+        "bpmSeries": [99, 103, 108, 114, 119, 116, 112, 108, 105, 102, 101, 103, 106, 108, 107, 105]
+      },
+      {
+        "exerciseId": "dumbbell-row",
+        "exerciseName": "Bent-over row",
+        "avgBpm": 105,
+        "maxBpm": 117,
+        "bpmSeries": [97, 101, 106, 112, 117, 114, 110, 106, 103, 101, 100, 102, 105, 107, 106, 104]
+      },
+      {
+        "exerciseId": "arm-circles",
+        "exerciseName": "Arm circles",
+        "avgBpm": 91,
+        "maxBpm": 101,
+        "bpmSeries": [85, 87, 90, 93, 97, 101, 99, 95, 92, 90, 89, 90, 92, 93, 92, 91]
+      }
+    ]
   }
 ]
