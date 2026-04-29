@@ -72,3 +72,15 @@ export type PlannedExercise = Exercise & {
   repsDisplay: string;
   minutes: number;
 };
+
+/** Serializable subset passed to the dashboard for dislike / swap logic. */
+export type WorkoutPlanningPreferences = Pick<
+  UserPreferences,
+  "goal" | "wantsLowImpact" | "preferredExerciseTypes" | "workoutDurationMinutes"
+>;
+
+/** Fields required to build the leveled exercise pool (server or client). */
+export type ExercisePoolPreferences = Pick<
+  UserPreferences,
+  "goal" | "wantsLowImpact" | "preferredExerciseTypes"
+>;

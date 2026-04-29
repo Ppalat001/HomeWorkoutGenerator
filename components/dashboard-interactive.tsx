@@ -9,8 +9,17 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
+import { ThumbsDown } from "lucide-react";
 import type { ConsistencyPlan, DayPlan } from "@/lib/generate-workout";
-import type { AdaptiveLevel } from "@/lib/workout-types";
+import {
+  applyDislikesToWeek,
+  pickReplacementPlannedExercise,
+} from "@/lib/exercise-replacement";
+import {
+  readDislikedExerciseIds,
+  writeDislikedExerciseIds,
+} from "@/lib/disliked-exercises";
+import type { AdaptiveLevel, WorkoutPlanningPreferences } from "@/lib/workout-types";
 import WorkoutFeedback from "@/components/workout-feedback";
 
 function localTodayIso(): string {
@@ -81,6 +90,8 @@ function relocateTrainingRest(
 }
 
 type Props = {
+  userId: string;
+  workoutPlanningPreferences: WorkoutPlanningPreferences;
   initialWeek: DayPlan[];
   consistency: ConsistencyPlan;
   adaptiveLevel: AdaptiveLevel;
@@ -96,6 +107,8 @@ const LEVEL_OPTIONS: { value: AdaptiveLevel; label: string }[] = [
 ];
 
 export default function DashboardInteractive({
+  userId,
+  workoutPlanningPreferences,
   initialWeek,
   consistency,
   adaptiveLevel,
@@ -137,25 +150,98 @@ export default function DashboardInteractive({
   const [levelPromptError, setLevelPromptError] = useState("");
   const [levelPromptMessage, setLevelPromptMessage] = useState("");
   const [rescheduleMessage, setRescheduleMessage] = useState("");
+  const [dislikeMessage, setDislikeMessage] = useState("");
   const pendingScrollRestore = useRef<number | null>(null);
+
+  const sessionLevelForPool: AdaptiveLevel = isReturnWorkout
+    ? "beginner"
+    : adaptiveLevel;
   useEffect(() => {
     setLevel(adaptiveLevel);
     setLevelError("");
   }, [adaptiveLevel]);
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const base = initialWeek.map((d) => ({
+      ...d,
+      exercises: d.exercises.map((ex) => ({ ...ex })),
+    }));
+    const disliked = readDislikedExerciseIds(userId);
     setWeek(
-      initialWeek.map((d) => ({
-        ...d,
-        exercises: d.exercises.map((ex) => ({ ...ex })),
-      }))
+      applyDislikesToWeek(
+        base,
+        workoutPlanningPreferences,
+        sessionLevelForPool,
+        isReturnWorkout,
+        disliked
+      )
     );
-  }, [initialWeek]);
+  }, [
+    initialWeek,
+    userId,
+    workoutPlanningPreferences.goal,
+    workoutPlanningPreferences.wantsLowImpact,
+    workoutPlanningPreferences.workoutDurationMinutes,
+    workoutPlanningPreferences.preferredExerciseTypes.join(","),
+    sessionLevelForPool,
+    isReturnWorkout,
+  ]);
   useEffect(() => {
     setPromptEveryDays(consistency.sessionIncreasePromptEveryDays);
   }, [consistency.sessionIncreasePromptEveryDays]);
   useEffect(() => {
     setLevelPromptEveryDays(consistency.levelIncreasePromptEveryDays);
   }, [consistency.levelIncreasePromptEveryDays]);
+
+  const handleDislikeExercise = useCallback(
+    (dateIso: string, exerciseId: string) => {
+      setDislikeMessage("");
+      setWeek((prev) => {
+        const dayIdx = prev.findIndex((d) => d.dateIso === dateIso);
+        if (dayIdx < 0) return prev;
+        const day = prev[dayIdx]!;
+        const exIdx = day.exercises.findIndex((e) => e.id === exerciseId);
+        if (exIdx < 0) return prev;
+        const replaced = day.exercises[exIdx]!;
+        const prevDisliked = readDislikedExerciseIds(userId);
+        const nextDisliked = new Set(prevDisliked);
+        nextDisliked.add(exerciseId);
+        const used = new Set(day.exercises.map((e) => e.id));
+        used.delete(replaced.id);
+        const rep = pickReplacementPlannedExercise(
+          workoutPlanningPreferences,
+          sessionLevelForPool,
+          isReturnWorkout,
+          nextDisliked,
+          used,
+          replaced,
+          Date.now()
+        );
+        if (!rep) {
+          queueMicrotask(() =>
+            setDislikeMessage(
+              "No alternative matched your filters. Try adjusting exercise types or low-impact in onboarding."
+            )
+          );
+          return prev;
+        }
+        writeDislikedExerciseIds(userId, nextDisliked);
+        const nextExercises = day.exercises.map((e, i) =>
+          i === exIdx ? rep : e
+        );
+        return prev.map((d, i) =>
+          i === dayIdx ? { ...d, exercises: nextExercises } : d
+        );
+      });
+    },
+    [
+      userId,
+      workoutPlanningPreferences.goal,
+      workoutPlanningPreferences.wantsLowImpact,
+      workoutPlanningPreferences.preferredExerciseTypes.join(","),
+      sessionLevelForPool,
+      isReturnWorkout,
+    ]
+  );
 
   const selectDay = useCallback((idx: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -979,6 +1065,17 @@ export default function DashboardInteractive({
             </p>
           )}
 
+          {dislikeMessage && (
+            <p className="mt-3 text-xs text-amber-200/90">{dislikeMessage}</p>
+          )}
+
+          {selected.isTrainingDay && selected.exercises.length > 0 && (
+            <p className="mt-3 text-xs text-white/55">
+              Uncomfortable with a movement? Use dislike — we&apos;ll skip it
+              next time and swap in another exercise for this slot.
+            </p>
+          )}
+
           <div className="mt-4 space-y-4">
             {selected.isTrainingDay &&
               selected.exercises.map((ex) => (
@@ -987,7 +1084,7 @@ export default function DashboardInteractive({
                   className="rounded-xl border border-white/10 bg-[#07142f]/50 p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-cyan-100">
                         {ex.type}
                       </p>
@@ -996,9 +1093,22 @@ export default function DashboardInteractive({
                         {ex.sets} sets · {ex.repsDisplay} reps · ~{ex.minutes} min
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] uppercase tracking-wide text-white/60">
-                      {ex.level}
-                    </span>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] uppercase tracking-wide text-white/60">
+                        {ex.level}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDislikeExercise(selected.dateIso, ex.id)
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-rose-400/35 bg-rose-500/10 px-2.5 py-1.5 text-xs font-medium text-rose-100 transition hover:bg-rose-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-300"
+                        title="Not comfortable with this exercise — hide it and load a different one"
+                      >
+                        <ThumbsDown className="h-3.5 w-3.5" aria-hidden />
+                        Dislike
+                      </button>
+                    </div>
                   </div>
                   {ex.video && (
                     <video

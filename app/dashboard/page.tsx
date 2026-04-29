@@ -69,6 +69,13 @@ export default async function DashboardPage() {
         />
         <div className="relative z-10 mx-auto max-w-7xl">
           <DashboardInteractive
+            userId={session.user.id}
+            workoutPlanningPreferences={{
+              goal: preferences.goal,
+              wantsLowImpact: preferences.wantsLowImpact,
+              preferredExerciseTypes: preferences.preferredExerciseTypes,
+              workoutDurationMinutes: preferences.workoutDurationMinutes,
+            }}
             initialWeek={plan.week}
             adaptiveLevel={plan.adaptiveLevel}
             displayLevel={plan.displayLevel}

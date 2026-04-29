@@ -4,6 +4,7 @@ import { defaultTrainingWeekdayKeys } from "@/lib/training-week";
 import type {
   AdaptiveLevel,
   Exercise,
+  ExercisePoolPreferences,
   PlannedExercise,
   UserPreferences,
   WorkoutHistoryEntry,
@@ -83,14 +84,14 @@ function levelRank(level: AdaptiveLevel): number {
   }
 }
 
-function filterPool(
-  preferences: UserPreferences,
+export function buildSessionExercisePool(
+  preferences: ExercisePoolPreferences,
   sessionLevel: AdaptiveLevel,
   isReturnWorkout: boolean
 ): Exercise[] {
   const targetRank = isReturnWorkout ? 0 : levelRank(sessionLevel);
 
-  return EXERCISES.filter((ex) => {
+  const filtered = EXERCISES.filter((ex) => {
     if (preferences.wantsLowImpact && !ex.lowImpact) return false;
     if (
       preferences.preferredExerciseTypes.length > 0 &&
@@ -104,6 +105,21 @@ function filterPool(
     }
     return exRank === targetRank;
   });
+
+  if (filtered.length === 0) {
+    return EXERCISES.filter((ex) => ex.level === "beginner" && ex.lowImpact);
+  }
+  return filtered;
+}
+
+export function plannedFromExercise(
+  ex: Exercise,
+  preferences: Pick<UserPreferences, "goal">
+): PlannedExercise {
+  const sets = preferences.goal === "muscle_gain" ? 4 : 3;
+  const repsDisplay = ex.reps ? `${ex.reps}` : "30–45s";
+  const minutes = ex.duration ?? 4;
+  return { ...ex, sets, repsDisplay, minutes };
 }
 
 function goalSort(preferences: UserPreferences, a: Exercise, b: Exercise): number {
@@ -143,15 +159,7 @@ function pickSession(
     const minutes = ex.duration ?? 4;
     if (used + minutes > durationCap + 2 && planned.length >= 3) break;
 
-    const sets = preferences.goal === "muscle_gain" ? 4 : 3;
-    const repsDisplay = ex.reps ? `${ex.reps}` : "30–45s";
-
-    planned.push({
-      ...ex,
-      sets,
-      repsDisplay,
-      minutes,
-    });
+    planned.push(plannedFromExercise(ex, preferences));
 
     used += minutes;
     i += 1;
@@ -424,10 +432,7 @@ export function generateWorkout(
     suggestedDurationMinutes - preferences.workoutDurationMinutes;
 
   const sessionLevel: AdaptiveLevel = isReturnWorkout ? "beginner" : adaptiveLevel;
-  let pool = filterPool(preferences, sessionLevel, isReturnWorkout);
-  if (pool.length === 0) {
-    pool = EXERCISES.filter((ex) => ex.level === "beginner" && ex.lowImpact);
-  }
+  const pool = buildSessionExercisePool(preferences, sessionLevel, isReturnWorkout);
 
   const week: DayPlan[] = [];
   const preferred = defaultTrainingWeekdayKeys(
