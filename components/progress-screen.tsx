@@ -8,8 +8,7 @@ import type {
 
 type Props = {
   payload: {
-    thisWeek: WeekVolumeSlice;
-    lastWeek: WeekVolumeSlice;
+    weeks: WeekVolumeSlice[];
     motivationPopup: MotivationPopup;
     weeklyTarget: number;
     streakCount: number;
@@ -53,7 +52,7 @@ function volumeConicGradient(slice: WeekVolumeSlice): string {
 function QualityDonut({ percent }: { percent: number | null }) {
   if (percent === null) {
     return (
-      <div className="flex h-44 w-44 flex-col items-center justify-center rounded-full border border-white/15 bg-white/5 text-center text-xs text-white/55">
+      <div className="flex h-36 w-36 flex-col items-center justify-center rounded-full border border-white/15 bg-white/5 text-center text-[11px] text-white/55 sm:h-40 sm:w-40">
         No completed
         <br />
         sessions yet
@@ -64,15 +63,17 @@ function QualityDonut({ percent }: { percent: number | null }) {
   const gradient = `conic-gradient(#22c55e 0deg ${(p / 100) * 360}deg, #1e293b ${(p / 100) * 360}deg 360deg)`;
   return (
     <div
-      className="relative h-44 w-44 rounded-full p-3"
+      className="relative h-36 w-36 rounded-full p-2.5 sm:h-40 sm:w-40 sm:p-3"
       style={{ background: gradient }}
       role="img"
       aria-label={`Average session completion ${p} percent`}
     >
       <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[#0a1628] text-center">
-        <span className="text-3xl font-bold text-emerald-300">{p}%</span>
-        <span className="mt-1 text-[10px] uppercase tracking-wide text-white/45">
-          Avg completion
+        <span className="text-2xl font-bold text-emerald-300 sm:text-3xl">
+          {p}%
+        </span>
+        <span className="mt-0.5 text-[9px] uppercase tracking-wide text-white/45">
+          Avg
         </span>
       </div>
     </div>
@@ -87,29 +88,44 @@ function WeekVolumeCard({ slice }: { slice: WeekVolumeSlice }) {
       : 0;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur-md">
-      <h3 className="text-lg font-semibold text-white">{slice.label}</h3>
-      <p className="mt-1 text-xs text-white/55">
-        Training days vs completed, skipped, missed, and still planned.
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-md">
+      <h3 className="text-base font-semibold leading-snug text-white">
+        {slice.label}
+      </h3>
+      <p className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] leading-relaxed text-white/70">
+        <span className="font-semibold text-white/90">Scheduled</span>{" "}
+        training days:{" "}
+        <strong className="text-cyan-200/95">{slice.scheduled}</strong>
+        <span className="mx-2 text-white/35">·</span>
+        <span className="font-semibold text-white/90">Logged</span> on those
+        days:{" "}
+        <strong className="text-emerald-200/95">{slice.sessionsLogged}</strong>{" "}
+        <span className="text-white/45">
+          (completed {slice.completed}, skipped {slice.skipped})
+        </span>
       </p>
-      <div className="mt-6 flex flex-col items-center gap-8 md:flex-row md:items-start md:justify-center">
-        <div className="flex flex-col items-center gap-3">
+      <p className="mt-2 text-[11px] text-white/50">
+        Pie: volume on scheduled days. Donut: average completion rate on{" "}
+        <span className="text-white/70">completed</span> sessions only.
+      </p>
+      <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-center">
+        <div className="flex flex-col items-center gap-2">
           <div
-            className="h-44 w-44 rounded-full shadow-lg ring-2 ring-white/10"
+            className="h-36 w-36 rounded-full shadow-lg ring-2 ring-white/10 sm:h-40 sm:w-40"
             style={{ background: g }}
             role="img"
             aria-label={`${slice.label} volume breakdown`}
           />
-          <span className="text-xs text-white/50">
-            {slice.scheduled} scheduled day{slice.scheduled === 1 ? "" : "s"}
+          <span className="text-[11px] text-white/50">Volume pie</span>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <QualityDonut percent={slice.avgCompletionPercent} />
+          <span className="max-w-[10rem] text-center text-[11px] text-white/50">
+            Avg completion (completed only)
           </span>
         </div>
-        <div className="flex flex-col items-center gap-3">
-          <QualityDonut percent={slice.avgCompletionPercent} />
-          <span className="text-xs text-white/50">Logged sessions only</span>
-        </div>
       </div>
-      <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs">
+      <ul className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-[11px]">
         <li className="flex items-center gap-2">
           <span
             className="h-2.5 w-2.5 rounded-full"
@@ -220,9 +236,13 @@ export default function ProgressScreen({ payload }: Props) {
         <div>
           <h2 className="text-xl font-semibold text-white">Weekly overview</h2>
           <p className="mt-1 max-w-2xl text-sm text-white/65">
-            Volume pie shows how your scheduled training days went. The donut
-            is the average completion score from sessions you finished (
-            {payload.thisWeek.label.toLowerCase()}).
+            Every week since your first log (up to 52 weeks), newest first. Each
+            card shows scheduled training days, how many you logged on those
+            days, and average completion on finished sessions.
+          </p>
+          <p className="mt-2 text-xs text-white/45">
+            Showing <strong className="text-white/70">{payload.weeks.length}</strong>{" "}
+            week{payload.weeks.length === 1 ? "" : "s"}.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-xs">
@@ -244,12 +264,14 @@ export default function ProgressScreen({ payload }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <WeekVolumeCard slice={payload.thisWeek} />
-        <WeekVolumeCard slice={payload.lastWeek} />
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        {payload.weeks.map((slice) => (
+          <WeekVolumeCard key={slice.weekStartIso} slice={slice} />
+        ))}
       </div>
       <p className="text-center text-xs text-white/45">
-        Pies use the same weekly schedule template as your plan (Mon–Sun).
+        Weeks run Monday–Sunday, using the same training-day template as your
+        adaptive plan.
       </p>
     </div>
   );

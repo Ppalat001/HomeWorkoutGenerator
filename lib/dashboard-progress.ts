@@ -48,12 +48,16 @@ function buildLatestEntryByDate(
 }
 
 export type WeekVolumeSlice = {
+  /** Monday of that week (local), YYYY-MM-DD */
+  weekStartIso: string;
   label: string;
   completed: number;
   skipped: number;
   missed: number;
   upcoming: number;
   scheduled: number;
+  /** Logs on scheduled days: completed + skipped */
+  sessionsLogged: number;
   /** Mean `completionRate` of completed sessions this week, 0–100, or null if none. */
   avgCompletionPercent: number | null;
 };
@@ -66,14 +70,31 @@ export type MotivationPopup = {
   variant: MotivationVariant;
 };
 
+function formatWeekRangeShort(weekStart: Date): string {
+  const end = new Date(weekStart);
+  end.setDate(end.getDate() + 6);
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  const y = weekStart.getFullYear();
+  const yEnd = end.getFullYear();
+  const startStr = weekStart.toLocaleDateString(undefined, opts);
+  const endStr = end.toLocaleDateString(undefined, {
+    ...opts,
+    year: y !== yEnd ? "numeric" : undefined,
+  });
+  if (y === yEnd) {
+    return `${startStr} – ${endStr}, ${y}`;
+  }
+  return `${startStr}, ${y} – ${endStr}`;
+}
+
 function buildWeekVolumeSlice(
   weekStart: Date,
   consistency: Pick<ConsistencyPlan, "weeklyTarget" | "baseTrainingDaysPerWeek">,
-  history: WorkoutHistoryEntry[],
+  latestByDate: Map<string, WorkoutHistoryEntry>,
   todayIso: string,
-  label: string
+  currentMondayMs: number
 ): WeekVolumeSlice {
-  const latestByDate = buildLatestEntryByDate(history);
+  const weekStartIso = localDateIso(weekStart);
   const preferred = defaultTrainingWeekdayKeys(consistency.baseTrainingDaysPerWeek);
   const maxDays = consistency.weeklyTarget;
 
@@ -94,6 +115,8 @@ function buildWeekVolumeSlice(
   let upcoming = 0;
   let sumCompletion = 0;
   let completionSamples = 0;
+
+  const isCurrentWeek = weekStart.getTime() === currentMondayMs;
 
   for (const day of days) {
     if (!day.isTrainingDay) continue;
@@ -117,13 +140,19 @@ function buildWeekVolumeSlice(
       ? Math.round((sumCompletion / completionSamples) * 100)
       : null;
 
+  const sessionsLogged = completed + skipped;
+
   return {
-    label,
+    weekStartIso,
+    label: isCurrentWeek
+      ? `This week · ${formatWeekRangeShort(weekStart)}`
+      : formatWeekRangeShort(weekStart),
     completed,
     skipped,
     missed,
     upcoming,
     scheduled,
+    sessionsLogged,
     avgCompletionPercent,
   };
 }
@@ -223,13 +252,15 @@ export function pickMotivationPopup(
 }
 
 export type ProgressDashboardPayload = {
-  thisWeek: WeekVolumeSlice;
-  lastWeek: WeekVolumeSlice;
+  /** Newest week first (current Monday week at index 0). */
+  weeks: WeekVolumeSlice[];
   motivationPopup: MotivationPopup;
   weeklyTarget: number;
   streakCount: number;
   atRisk: boolean;
 };
+
+const MAX_WEEKS_SHOWN = 52;
 
 export function buildProgressDashboardPayload(
   preferences: UserPreferences,
@@ -238,29 +269,48 @@ export function buildProgressDashboardPayload(
   const plan = generateWorkout(preferences, history);
   const { consistency } = plan;
   const todayIso = localDateIso(new Date());
-  const weekStart = startOfWeekMonday(new Date());
-  const lastWeekStart = new Date(weekStart);
-  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+  const currentMonday = startOfWeekMonday(new Date());
+  const currentMondayMs = currentMonday.getTime();
+  const latestByDate = buildLatestEntryByDate(history);
 
   const slicePick = {
     weeklyTarget: consistency.weeklyTarget,
     baseTrainingDaysPerWeek: consistency.baseTrainingDaysPerWeek,
   };
 
-  const thisWeek = buildWeekVolumeSlice(
-    weekStart,
-    slicePick,
-    history,
-    todayIso,
-    "This week"
-  );
-  const lastWeek = buildWeekVolumeSlice(
-    lastWeekStart,
-    slicePick,
-    history,
-    todayIso,
-    "Last week"
-  );
+  let earliestMonday = new Date(currentMonday);
+  if (history.length > 0) {
+    const earliestMs = Math.min(
+      ...history.map((h) => new Date(h.date).getTime())
+    );
+    earliestMonday = startOfWeekMonday(new Date(earliestMs));
+  }
+
+  const maxPastMonday = new Date(currentMonday);
+  maxPastMonday.setDate(maxPastMonday.getDate() - (MAX_WEEKS_SHOWN - 1) * 7);
+  if (earliestMonday.getTime() < maxPastMonday.getTime()) {
+    earliestMonday = maxPastMonday;
+  }
+
+  const weeks: WeekVolumeSlice[] = [];
+  for (
+    let ws = new Date(currentMonday);
+    ws.getTime() >= earliestMonday.getTime() && weeks.length < MAX_WEEKS_SHOWN;
+    ws.setDate(ws.getDate() - 7)
+  ) {
+    weeks.push(
+      buildWeekVolumeSlice(
+        new Date(ws),
+        slicePick,
+        latestByDate,
+        todayIso,
+        currentMondayMs
+      )
+    );
+  }
+
+  const thisWeek = weeks[0];
+  const lastWeek = weeks[1] ?? thisWeek;
 
   const motivationPopup = pickMotivationPopup(
     preferences.userId,
@@ -271,8 +321,7 @@ export function buildProgressDashboardPayload(
   );
 
   return {
-    thisWeek,
-    lastWeek,
+    weeks,
     motivationPopup,
     weeklyTarget: consistency.weeklyTarget,
     streakCount: consistency.streakCount,
