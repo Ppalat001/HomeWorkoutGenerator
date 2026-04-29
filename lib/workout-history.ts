@@ -20,6 +20,7 @@ type WorkoutHistoryDocument = {
   feedback: WorkoutFeedback | null;
   skipped: boolean;
   exerciseHeartRates?: ExerciseHeartRateEntry[];
+  trackingStatus?: string;
 };
 
 function mapDoc(doc: WorkoutHistoryDocument): WorkoutHistoryEntry {
@@ -32,6 +33,7 @@ function mapDoc(doc: WorkoutHistoryDocument): WorkoutHistoryEntry {
     feedback: doc.feedback,
     skipped: doc.skipped,
     exerciseHeartRates: doc.exerciseHeartRates,
+    trackingStatus: doc.trackingStatus,
   };
 }
 

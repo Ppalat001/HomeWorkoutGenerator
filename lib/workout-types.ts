@@ -63,6 +63,8 @@ export type WorkoutHistoryEntry = {
   feedback: WorkoutFeedback | null;
   skipped: boolean;
   exerciseHeartRates?: ExerciseHeartRateEntry[];
+  /** Optional session tracking flag from wearables / imports (e.g. Mongo seed). */
+  trackingStatus?: string;
 };
 
 export type PlannedExercise = Exercise & {

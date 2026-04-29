@@ -11,8 +11,6 @@ import {
 import { useRouter } from "next/navigation";
 import type { ConsistencyPlan, DayPlan } from "@/lib/generate-workout";
 import type { AdaptiveLevel } from "@/lib/workout-types";
-import type { HeartRateInsight } from "@/lib/heart-rate-insights";
-import ExerciseHeartRateControl from "@/components/exercise-heart-rate-control";
 import WorkoutFeedback from "@/components/workout-feedback";
 
 function localTodayIso(): string {
@@ -89,7 +87,6 @@ type Props = {
   displayLevel: string;
   isReturnWorkout: boolean;
   explanation: string;
-  heartRateInsights: Partial<Record<string, HeartRateInsight>>;
 };
 
 const LEVEL_OPTIONS: { value: AdaptiveLevel; label: string }[] = [
@@ -105,7 +102,6 @@ export default function DashboardInteractive({
   displayLevel,
   isReturnWorkout,
   explanation,
-  heartRateInsights,
 }: Props) {
   const router = useRouter();
   const todayIso = useMemo(() => localTodayIso(), []);
@@ -1000,17 +996,9 @@ export default function DashboardInteractive({
                         {ex.sets} sets · {ex.repsDisplay} reps · ~{ex.minutes} min
                       </p>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] uppercase tracking-wide text-white/60">
-                        {ex.level}
-                      </span>
-                      <ExerciseHeartRateControl
-                        variant="card"
-                        exerciseId={ex.id}
-                        exerciseName={ex.name}
-                        insight={heartRateInsights[ex.id]}
-                      />
-                    </div>
+                    <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] uppercase tracking-wide text-white/60">
+                      {ex.level}
+                    </span>
                   </div>
                   {ex.video && (
                     <video
@@ -1071,7 +1059,7 @@ export default function DashboardInteractive({
                   }
                 }}
                 onDrop={(e) => handleDrop(idx, e)}
-                className={`overflow-visible rounded-xl border bg-[#07142f]/50 transition ${outerRing} ${outerDragGlow}`}
+                className={`overflow-hidden rounded-xl border bg-[#07142f]/50 transition ${outerRing} ${outerDragGlow}`}
               >
                 <button
                   type="button"
@@ -1102,22 +1090,9 @@ export default function DashboardInteractive({
                     {d.isTrainingDay ? "Training" : "Rest"}
                   </p>
                   {d.isTrainingDay && (
-                    <ul className="mt-2 space-y-1.5 text-xs text-white/80">
+                    <ul className="mt-2 space-y-1 text-xs text-white/80">
                       {d.exercises.map((ex) => (
-                        <li
-                          key={ex.id}
-                          className="flex items-center justify-between gap-2"
-                        >
-                          <span className="min-w-0 flex-1 truncate">
-                            • {ex.name}
-                          </span>
-                          <ExerciseHeartRateControl
-                            variant="inline"
-                            exerciseId={ex.id}
-                            exerciseName={ex.name}
-                            insight={heartRateInsights[ex.id]}
-                          />
-                        </li>
+                        <li key={ex.id}>• {ex.name}</li>
                       ))}
                     </ul>
                   )}
