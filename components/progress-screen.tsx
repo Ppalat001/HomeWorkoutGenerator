@@ -16,23 +16,23 @@ type Props = {
   };
 };
 
+/** Done · Missed (no log, past) · Not completed (skipped + still to come) */
 const PIE_COLORS = {
-  completed: "#22c55e",
-  skipped: "#fb923c",
-  missed: "#64748b",
-  upcoming: "#38bdf8",
+  done: "#22c55e",
+  missed: "#f97316",
+  notCompleted: "#ef4444",
 } as const;
 
-function volumeConicGradient(slice: WeekVolumeSlice): string {
+function weekPieGradient(slice: WeekVolumeSlice): string {
   const { completed, skipped, missed, upcoming, scheduled } = slice;
   if (scheduled <= 0) {
     return "conic-gradient(#1e293b 0deg 360deg)";
   }
+  const notCompleted = skipped + upcoming;
   const parts: { value: number; color: string }[] = [
-    { value: completed, color: PIE_COLORS.completed },
-    { value: skipped, color: PIE_COLORS.skipped },
+    { value: completed, color: PIE_COLORS.done },
     { value: missed, color: PIE_COLORS.missed },
-    { value: upcoming, color: PIE_COLORS.upcoming },
+    { value: notCompleted, color: PIE_COLORS.notCompleted },
   ];
   let acc = 0;
   const segments: string[] = [];
@@ -49,46 +49,16 @@ function volumeConicGradient(slice: WeekVolumeSlice): string {
   return `conic-gradient(${segments.join(", ")})`;
 }
 
-function QualityDonut({ percent }: { percent: number | null }) {
-  if (percent === null) {
-    return (
-      <div className="flex h-36 w-36 flex-col items-center justify-center rounded-full border border-white/15 bg-white/5 text-center text-[11px] text-white/55 sm:h-40 sm:w-40">
-        No completed
-        <br />
-        sessions yet
-      </div>
-    );
-  }
-  const p = Math.min(100, Math.max(0, percent));
-  const gradient = `conic-gradient(#22c55e 0deg ${(p / 100) * 360}deg, #1e293b ${(p / 100) * 360}deg 360deg)`;
-  return (
-    <div
-      className="relative h-36 w-36 rounded-full p-2.5 sm:h-40 sm:w-40 sm:p-3"
-      style={{ background: gradient }}
-      role="img"
-      aria-label={`Average session completion ${p} percent`}
-    >
-      <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[#0a1628] text-center">
-        <span className="text-2xl font-bold text-emerald-300 sm:text-3xl">
-          {p}%
-        </span>
-        <span className="mt-0.5 text-[9px] uppercase tracking-wide text-white/45">
-          Avg
-        </span>
-      </div>
-    </div>
-  );
-}
-
 function WeekVolumeCard({ slice }: { slice: WeekVolumeSlice }) {
-  const g = volumeConicGradient(slice);
+  const g = weekPieGradient(slice);
+  const notCompleted = slice.skipped + slice.upcoming;
   const pct = (n: number) =>
     slice.scheduled > 0
       ? Math.round((n / slice.scheduled) * 100)
       : 0;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-md">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md">
       <h3 className="text-base font-semibold leading-snug text-white">
         {slice.label}
       </h3>
@@ -105,65 +75,51 @@ function WeekVolumeCard({ slice }: { slice: WeekVolumeSlice }) {
         </span>
       </p>
       <p className="mt-2 text-[11px] text-white/50">
-        Pie: volume on scheduled days. Donut: average completion rate on{" "}
-        <span className="text-white/70">completed</span> sessions only.
+        One pie per week: green = done, orange = missed (no log), red = not
+        completed (skipped + still planned).
       </p>
-      <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-center">
-        <div className="flex flex-col items-center gap-2">
+      <div className="mt-4 flex w-full justify-center">
+        <div className="w-full max-w-[160px] shrink-0">
           <div
-            className="h-36 w-36 rounded-full shadow-lg ring-2 ring-white/10 sm:h-40 sm:w-40"
+            className="aspect-square w-full max-w-full rounded-full shadow-lg ring-2 ring-white/10"
             style={{ background: g }}
             role="img"
-            aria-label={`${slice.label} volume breakdown`}
+            aria-label={`${slice.label}: done, missed, not completed`}
           />
-          <span className="text-[11px] text-white/50">Volume pie</span>
-        </div>
-        <div className="flex flex-col items-center gap-2">
-          <QualityDonut percent={slice.avgCompletionPercent} />
-          <span className="max-w-[10rem] text-center text-[11px] text-white/50">
-            Avg completion (completed only)
-          </span>
         </div>
       </div>
-      <ul className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-[11px]">
-        <li className="flex items-center gap-2">
+      <ul className="mt-4 flex flex-col gap-2 text-[11px] text-white/80">
+        <li className="flex min-w-0 items-center gap-2">
           <span
-            className="h-2.5 w-2.5 rounded-full"
-            style={{ background: PIE_COLORS.completed }}
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ background: PIE_COLORS.done }}
           />
-          <span className="text-white/80">
+          <span className="min-w-0">
             Done {slice.completed}{" "}
             <span className="text-white/45">({pct(slice.completed)}%)</span>
           </span>
         </li>
-        <li className="flex items-center gap-2">
+        <li className="flex min-w-0 items-center gap-2">
           <span
-            className="h-2.5 w-2.5 rounded-full"
-            style={{ background: PIE_COLORS.skipped }}
-          />
-          <span className="text-white/80">
-            Skipped {slice.skipped}{" "}
-            <span className="text-white/45">({pct(slice.skipped)}%)</span>
-          </span>
-        </li>
-        <li className="flex items-center gap-2">
-          <span
-            className="h-2.5 w-2.5 rounded-full"
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
             style={{ background: PIE_COLORS.missed }}
           />
-          <span className="text-white/80">
+          <span className="min-w-0">
             Missed {slice.missed}{" "}
             <span className="text-white/45">({pct(slice.missed)}%)</span>
           </span>
         </li>
-        <li className="flex items-center gap-2">
+        <li className="flex min-w-0 items-center gap-2">
           <span
-            className="h-2.5 w-2.5 rounded-full"
-            style={{ background: PIE_COLORS.upcoming }}
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ background: PIE_COLORS.notCompleted }}
           />
-          <span className="text-white/80">
-            Upcoming {slice.upcoming}{" "}
-            <span className="text-white/45">({pct(slice.upcoming)}%)</span>
+          <span className="min-w-0">
+            Not completed {notCompleted}{" "}
+            <span className="text-white/45">
+              ({pct(notCompleted)}%) — skipped {slice.skipped}, upcoming{" "}
+              {slice.upcoming}
+            </span>
           </span>
         </li>
       </ul>
@@ -236,9 +192,9 @@ export default function ProgressScreen({ payload }: Props) {
         <div>
           <h2 className="text-xl font-semibold text-white">Weekly overview</h2>
           <p className="mt-1 max-w-2xl text-sm text-white/65">
-            Every week since your first log (up to 52 weeks), newest first. Each
-            card shows scheduled training days, how many you logged on those
-            days, and average completion on finished sessions.
+            Every week since your first log (up to 52 weeks), newest first.
+            Each card shows scheduled days, logs, and one pie: done (green),
+            missed (orange), not completed (red).
           </p>
           <p className="mt-2 text-xs text-white/45">
             Showing <strong className="text-white/70">{payload.weeks.length}</strong>{" "}
@@ -264,7 +220,7 @@ export default function ProgressScreen({ payload }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <div className="grid min-w-0 gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 [&>*]:min-w-0">
         {payload.weeks.map((slice) => (
           <WeekVolumeCard key={slice.weekStartIso} slice={slice} />
         ))}
