@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import LogoutButton from "@/components/logout-button";
+import { showExpertDashboardExtras } from "@/lib/dashboard-expert-extras";
 import { goalsContentForLevel, showDashboardGoalsLink } from "@/lib/dashboard-goals";
 import { getUserPreferences } from "@/lib/preferences";
 
@@ -52,6 +53,22 @@ export default async function DashboardGoalsPage() {
             >
               Show progress
             </Link>
+            {showExpertDashboardExtras(preferences.fitnessLevel) && (
+              <>
+                <Link
+                  href="/dashboard/challenge"
+                  className="rounded-xl border border-orange-400/40 bg-orange-500/15 px-4 py-2 text-sm font-semibold text-orange-50 transition hover:bg-orange-500/25"
+                >
+                  Challenge
+                </Link>
+                <Link
+                  href="/dashboard/nutrition"
+                  className="rounded-xl border border-sky-400/40 bg-sky-500/15 px-4 py-2 text-sm font-semibold text-sky-50 transition hover:bg-sky-500/25"
+                >
+                  Nutrition plan
+                </Link>
+              </>
+            )}
             <Link
               href="/"
               className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10"

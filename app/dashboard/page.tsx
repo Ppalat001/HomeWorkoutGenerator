@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import DashboardInteractive from "@/components/dashboard-interactive";
 import LogoutButton from "@/components/logout-button";
+import { showExpertDashboardExtras } from "@/lib/dashboard-expert-extras";
 import { showDashboardGoalsLink } from "@/lib/dashboard-goals";
 import { generateWorkout } from "@/lib/generate-workout";
 import { getUserPreferences } from "@/lib/preferences";
@@ -41,6 +42,22 @@ export default async function DashboardPage() {
               >
                 Goals
               </Link>
+            )}
+            {showExpertDashboardExtras(preferences.fitnessLevel) && (
+              <>
+                <Link
+                  href="/dashboard/challenge"
+                  className="rounded-xl border border-orange-400/45 bg-orange-500/15 px-4 py-2 text-sm font-semibold text-orange-50 transition hover:bg-orange-500/25"
+                >
+                  Challenge
+                </Link>
+                <Link
+                  href="/dashboard/nutrition"
+                  className="rounded-xl border border-sky-400/45 bg-sky-500/15 px-4 py-2 text-sm font-semibold text-sky-50 transition hover:bg-sky-500/25"
+                >
+                  Nutrition plan
+                </Link>
+              </>
             )}
             <Link
               href="/dashboard/progress"
