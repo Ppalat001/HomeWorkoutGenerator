@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import DashboardInteractive from "@/components/dashboard-interactive";
 import LogoutButton from "@/components/logout-button";
+import { showDashboardGoalsLink } from "@/lib/dashboard-goals";
 import { generateWorkout } from "@/lib/generate-workout";
 import { getUserPreferences } from "@/lib/preferences";
 import { getWorkoutHistory } from "@/lib/workout-history";
@@ -33,6 +34,14 @@ export default async function DashboardPage() {
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            {showDashboardGoalsLink(preferences.fitnessLevel) && (
+              <Link
+                href="/dashboard/goals"
+                className="rounded-xl border border-emerald-400/45 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-500/25"
+              >
+                Goals
+              </Link>
+            )}
             <Link
               href="/dashboard/progress"
               className="rounded-xl border border-violet-400/45 bg-violet-500/15 px-4 py-2 text-sm font-semibold text-violet-50 transition hover:bg-violet-500/25"
