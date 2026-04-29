@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import DashboardInteractive from "@/components/dashboard-interactive";
+import ProgressScreen from "@/components/progress-screen";
 import LogoutButton from "@/components/logout-button";
-import { generateWorkout } from "@/lib/generate-workout";
+import { buildProgressDashboardPayload } from "@/lib/dashboard-progress";
 import { getUserPreferences } from "@/lib/preferences";
 import { getWorkoutHistory } from "@/lib/workout-history";
 
-export default async function DashboardPage() {
+export default async function DashboardProgressPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -20,36 +20,30 @@ export default async function DashboardPage() {
   }
 
   const history = await getWorkoutHistory(session.user.id);
-  const plan = generateWorkout(preferences, history);
+  const payload = buildProgressDashboardPayload(preferences, history);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#020617] via-[#0b1b4d] to-[#152a68] text-white">
       <header className="border-b border-white/10 bg-[#07142f]/70 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm text-white/70">Adaptive training</p>
+            <p className="text-sm text-white/70">Dashboard</p>
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              {session.user?.name || session.user?.email}
+              Show progress
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/dashboard/progress"
-              className="rounded-xl border border-violet-400/45 bg-violet-500/15 px-4 py-2 text-sm font-semibold text-violet-50 transition hover:bg-violet-500/25"
+              href="/dashboard"
+              className="rounded-xl border border-cyan-400/45 bg-cyan-500/15 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-500/25"
             >
-              Show progress
+              Back to plan
             </Link>
             <Link
               href="/dashboard/history"
-              className="rounded-xl border border-cyan-400/45 bg-cyan-500/15 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-500/25"
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10"
             >
-              Past sessions &amp; heart rate
-            </Link>
-            <Link
-              href="/dashboard/history/exercises"
-              className="rounded-xl border border-rose-400/40 bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-50 transition hover:bg-rose-500/25"
-            >
-              Which exercises had high HR?
+              Past sessions
             </Link>
             <Link
               href="/"
@@ -68,21 +62,7 @@ export default async function DashboardPage() {
           aria-hidden
         />
         <div className="relative z-10 mx-auto max-w-7xl">
-          <DashboardInteractive
-            initialWeek={plan.week}
-            adaptiveLevel={plan.adaptiveLevel}
-            displayLevel={plan.displayLevel}
-            isReturnWorkout={plan.isReturnWorkout}
-            explanation={plan.explanation}
-            consistency={plan.consistency}
-          />
-
-          {preferences.limitations.trim().length > 0 && (
-            <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/75 backdrop-blur-md">
-              <p className="font-semibold text-white">Your notes</p>
-              <p className="mt-2">{preferences.limitations}</p>
-            </div>
-          )}
+          <ProgressScreen payload={payload} />
         </div>
       </section>
     </main>

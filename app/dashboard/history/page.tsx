@@ -39,6 +39,12 @@ export default async function DashboardHeartHistoryPage() {
               Which exercises had high HR?
             </Link>
             <Link
+              href="/dashboard/progress"
+              className="rounded-xl border border-violet-400/45 bg-violet-500/15 px-4 py-2 text-sm font-semibold text-violet-50 transition hover:bg-violet-500/25"
+            >
+              Show progress
+            </Link>
+            <Link
               href="/dashboard"
               className="rounded-xl border border-cyan-400/40 bg-cyan-500/15 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-500/25"
             >
