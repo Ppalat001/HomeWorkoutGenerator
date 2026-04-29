@@ -30,8 +30,12 @@ export default async function DashboardLayout({
 
   return (
     <>
-      {suggestion.show && (
-        <HeartHealthDoctorBanner reasons={suggestion.reasons} />
+      {suggestion.show && session.expires && (
+        <HeartHealthDoctorBanner
+          reasons={suggestion.reasons}
+          userId={session.user.id}
+          sessionExpires={session.expires}
+        />
       )}
       {children}
     </>
